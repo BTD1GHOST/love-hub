@@ -252,3 +252,42 @@ onAuthStateChanged(auth, async (user)=>{
     adminTabBtn?.classList.add("hidden");
   }
 });
+
+// ----- CHAT -----
+const chatBox = document.getElementById("chatBox");
+const chatText = document.getElementById("chatText");
+const sendBtn = document.getElementById("sendBtn");
+
+if(sendBtn){
+  sendBtn.onclick = async () => {
+    const text = chatText.value.trim();
+    if(!text) return;
+
+    await addDoc(collection(db, "messages"), {
+      text,
+      uid: auth.currentUser.uid,
+      email: auth.currentUser.email,
+      createdAt: serverTimestamp()
+    });
+
+    chatText.value = "";
+  };
+
+  const q = query(
+    collection(db, "messages"),
+    orderBy("createdAt"),
+    limit(100)
+  );
+
+  onSnapshot(q, snap => {
+    chatBox.innerHTML = "";
+    snap.forEach(d => {
+      const m = d.data();
+      const div = document.createElement("div");
+      div.className = "msgBubble " + (m.uid === auth.currentUser.uid ? "msgMe" : "msgOther");
+      div.textContent = m.text;
+      chatBox.appendChild(div);
+    });
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+}
