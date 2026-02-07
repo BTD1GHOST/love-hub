@@ -141,6 +141,20 @@ body{
   backdrop-filter: blur(10px);
 }
 
+.panelTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.panelActions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
 /* Love */
 .loveCard{
   margin-top:10px;
@@ -153,6 +167,7 @@ body{
 .loveBig{font-size:44px;font-weight:900}
 
 /* Admin list */
+.adminActions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
 .list{margin-top:12px; display:grid; gap:10px}
 .item{
   display:flex; align-items:center; justify-content:space-between;
@@ -161,7 +176,7 @@ body{
   border:1px solid var(--stroke);
 }
 .item small{color:var(--muted)}
-.item .actions{display:flex; gap:8px; flex-wrap:wrap}
+.item .actions{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
 
 /* Chat */
 .chatBox{
@@ -183,12 +198,19 @@ body{
   background: rgba(255,255,255,.35);
   position:relative;
 }
+.msgMeta{
+  font-size:12px;
+  opacity:.85;
+  margin-bottom:6px;
+  font-weight:800;
+}
 .msgMe{
   align-self:flex-end;
   background: linear-gradient(180deg, #ff8ac3, #ff5ca9);
   color:white;
 }
 .msgOther{align-self:flex-start;}
+
 .chatInput{
   display:flex;
   gap:10px;
@@ -230,6 +252,7 @@ body{
   padding:10px;
   display:grid;
   gap:10px;
+  position:relative;
 }
 .savedThumb{
   width:100%;
@@ -237,6 +260,24 @@ body{
   border-radius:14px;
   object-fit:cover;
   background: rgba(255,255,255,.2);
+}
+.selBadge{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  background: rgba(0,0,0,.55);
+  color:white;
+  font-weight:900;
+  border:1px solid rgba(255,255,255,.2);
+}
+.savedCard.selected{
+  outline: 3px solid rgba(255, 92, 169, .75);
+  box-shadow: 0 10px 30px rgba(255, 92, 169, .25);
 }
 
 /* Draw */
