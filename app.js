@@ -34,6 +34,7 @@ const firebaseConfig = {
   appId: "1:189429669803:web:e2e6cb2488d234e1fafcee"
 };
 
+// your Cloudflare Worker base URL
 const WORKER_URL = "https://lovehub-api.brayplaster7.workers.dev";
 
 const app = initializeApp(firebaseConfig);
@@ -326,7 +327,7 @@ function startAccountsRealtime(isAdmin){
         if (!confirm(`${u.denied ? "Unblock" : "Block"} this user?`)) return;
         await updateDoc(doc(db, "users", uid), {
           denied: !u.denied,
-          approved: u.denied ? true : false // if blocking, revoke approved
+          approved: u.denied ? true : false
         });
       };
 
@@ -336,16 +337,13 @@ function startAccountsRealtime(isAdmin){
       deleteBtn.onclick = async ()=>{
         if (!confirm("This will block them and remove their profile doc. Continue?")) return;
 
-        // Best-effort: block first so they can't use it
         try{
           await updateDoc(doc(db, "users", uid), { denied:true, approved:false });
         }catch{}
 
-        // delete user doc (profile)
         await deleteDoc(doc(db, "users", uid));
       };
 
-      // safety: don't let you delete your own doc by accident
       if (isMe){
         deleteBtn.disabled = true;
         deleteBtn.title = "Can't delete your own account doc.";
@@ -387,7 +385,6 @@ async function clearChat(isAdmin){
   }
 }
 btnClearChat?.addEventListener("click", async ()=>{
-  // isAdmin is set later after auth loads; we store it on window for ease
   await clearChat(!!window.__isAdmin);
 });
 
@@ -494,7 +491,7 @@ saveDeviceBtn?.addEventListener("click", async ()=>{
 // ===== Saved tab: select + unsave =====
 let savedSelectMode = false;
 let selectedSavedIds = new Set();
-let lastSavedDocs = []; // keep current docs list for select all
+let lastSavedDocs = [];
 
 function updateSavedToolbar(){
   if (!savedSelectBtn) return;
@@ -517,7 +514,7 @@ savedSelectBtn?.addEventListener("click", ()=>{
   savedSelectMode = !savedSelectMode;
   if (!savedSelectMode) selectedSavedIds.clear();
   updateSavedToolbar();
-  renderSavedGrid(lastSavedDocs); // re-render with/without badges
+  renderSavedGrid(lastSavedDocs);
 });
 
 savedSelectAllBtn?.addEventListener("click", ()=>{
@@ -566,7 +563,6 @@ function renderSavedGrid(docs){
     img.className = "savedThumb";
     img.alt = "saved";
 
-    // selection UI
     if (savedSelectMode){
       const selected = selectedSavedIds.has(id);
       if (selected) card.classList.add("selected");
@@ -625,11 +621,10 @@ function startSavedRealtime(){
     renderSavedGrid(docs);
   });
 
-  // init toolbar
   updateSavedToolbar();
 }
 
-// ===== Chat realtime (with display name label) =====
+// ===== Chat realtime (UPDATED: tap anywhere opens pic) =====
 function startChatRealtime(){
   if(!chatBox) return;
 
@@ -693,7 +688,6 @@ function startChatRealtime(){
       const div = document.createElement("div");
       div.className = "msgBubble " + (mine ? "msgMe" : "msgOther");
 
-      // name label
       const meta = document.createElement("div");
       meta.className = "msgMeta";
       meta.textContent = mine ? "You" : displayNameFor(m.uid, m.email);
@@ -705,17 +699,23 @@ function startChatRealtime(){
         body.textContent = mine ? "📸 You sent a pic" : "📸 Tap to view pic";
         div.classList.add("snap");
 
+        // make entire bubble clickable
+        div.style.cursor = "pointer";
+
         const viewDocRef = doc(db, "messages", d.id, "views", auth.currentUser.uid);
 
+        // already opened?
         getDoc(viewDocRef).then((vs) => {
           if (vs.exists()) {
             div.classList.remove("snap");
             div.classList.add("opened");
             body.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
+            div.style.cursor = "default";
           }
         });
 
-        body.addEventListener("click", async () => {
+        // CLICK ANYWHERE on the message bubble
+        div.addEventListener("click", async () => {
           const vs = await getDoc(viewDocRef);
           if (vs.exists()) return;
 
@@ -728,6 +728,7 @@ function startChatRealtime(){
             div.classList.remove("snap");
             div.classList.add("opened");
             body.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
+            div.style.cursor = "default";
           } catch (e) {
             alert(e.message);
           }
@@ -1063,6 +1064,9 @@ function startDrawingBoard(){
   }
 
   // TEXT TOOL
+  let boldOn2 = false; // separate variable name to avoid confusion
+  // keep boldOn already used above
+  // (we already hooked bold toggle above, so just use that variable)
   function fontFamilyFromSelect(v){
     if (v === "serif") return "Georgia, 'Times New Roman', serif";
     if (v === "mono") return "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
@@ -1098,7 +1102,7 @@ function startDrawingBoard(){
     ctx.restore();
   }
 
-  // pointer drawing state (brush only)
+  // pointer state
   let drawing = false;
   let smoothLast = null;
 
@@ -1194,6 +1198,32 @@ function startDrawGallery(){
   });
 }
 
+// Save drawing to R2 + Firestore
+saveDrawBtn?.addEventListener("click", async ()=>{
+  if(!auth.currentUser) return;
+
+  try{
+    const blob = await new Promise((resolve)=> drawCanvas.toBlob(resolve, "image/png", 0.95));
+    if(!blob) return alert("Could not export drawing.");
+
+    const file = new File([blob], `drawing-${Date.now()}.png`, { type:"image/png" });
+    const { key } = await uploadImageToR2(file);
+
+    await addDoc(collection(db, "drawings"), {
+      key,
+      filename: file.name,
+      contentType: "image/png",
+      uid: auth.currentUser.uid,
+      email: auth.currentUser.email || "",
+      createdAt: serverTimestamp()
+    });
+
+    alert("Saved 💗");
+  }catch(e){
+    alert(e.message);
+  }
+});
+
 // Auth gate
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
@@ -1231,19 +1261,16 @@ onAuthStateChanged(auth, async (user)=>{
   const isAdmin = !!data.isAdmin;
   window.__isAdmin = isAdmin;
 
-  // start nickname map for everyone
   startUsersRealtime();
 
   if(isAdmin) adminTabBtn?.classList.remove("hidden");
   else adminTabBtn?.classList.add("hidden");
 
-  // start features
   startChatRealtime();
   startSavedRealtime();
   startDrawingBoard();
   startDrawGallery();
 
-  // admin features
   if (isAdmin){
     loadPendingUsers();
     startAccountsRealtime(true);
