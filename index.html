@@ -12,17 +12,44 @@
       <div class="logo">💗</div>
       <div>
         <div class="title">Our Little Hub</div>
-        <div class="subtitle">cute + private</div>
+        <div class="subtitle">private + cute</div>
       </div>
     </div>
     <button id="btnSignOut" class="pill hidden">Sign out</button>
   </header>
 
-  <!-- AUTH SCREEN (Step 2 will make this real) -->
-  <main class="card">
+  <!-- AUTH -->
+  <main id="authView" class="card">
     <h2>Welcome 💕</h2>
-    <p class="muted">Step 1: We’re just getting the site online.</p>
-    <p class="muted">Next we’ll add sign-in + approval.</p>
+    <p class="muted">Sign in or create an account. New accounts must be approved.</p>
+
+    <div class="row">
+      <input id="email" class="input" type="email" placeholder="Email" autocomplete="email">
+      <input id="password" class="input" type="password" placeholder="Password" autocomplete="current-password">
+    </div>
+
+    <div class="row">
+      <button id="btnSignIn" class="btn primary">Sign In</button>
+      <button id="btnSignUp" class="btn">Sign Up</button>
+    </div>
+
+    <div id="authMsg" class="msg"></div>
+  </main>
+
+  <!-- PENDING -->
+  <main id="pendingView" class="card hidden">
+    <h2>Pending approval 🌸</h2>
+    <p class="muted">
+      Your account is created, but not approved yet.<br/>
+      Once approved, this page will unlock automatically.
+    </p>
+    <div class="heartbox">✨ 💗 ✨</div>
+  </main>
+
+  <!-- APP (locked until approved) -->
+  <main id="appView" class="card hidden">
+    <h2>Approved ✅</h2>
+    <p class="muted">Step 3 will add your tabs (Chat / Draw / Love / Calendar / Admin).</p>
   </main>
 
   <script type="module" src="app.js"></script>
