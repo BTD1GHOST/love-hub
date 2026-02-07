@@ -14,6 +14,7 @@ import {
   getDoc,
   updateDoc,
   addDoc,
+  deleteDoc,
   collection,
   query,
   where,
@@ -53,7 +54,9 @@ const authMsg = document.getElementById("authMsg");
 
 const adminTabBtn = document.querySelector(".adminOnly");
 const btnRefreshUsers = document.getElementById("btnRefreshUsers");
+const btnClearChat = document.getElementById("btnClearChat");
 const pendingList = document.getElementById("pendingList");
+const accountsList = document.getElementById("accountsList");
 const adminMsg = document.getElementById("adminMsg");
 
 // Chat UI
@@ -73,6 +76,9 @@ const fsTitle = document.getElementById("fsTitle");
 
 // Saved tab UI
 const savedGrid = document.getElementById("savedGrid");
+const savedSelectBtn = document.getElementById("savedSelectBtn");
+const savedSelectAllBtn = document.getElementById("savedSelectAllBtn");
+const savedUnsaveBtn = document.getElementById("savedUnsaveBtn");
 
 // Draw UI
 const drawCanvas = document.getElementById("drawCanvas");
@@ -99,6 +105,7 @@ const textFont = document.getElementById("textFont");
 const textSize = document.getElementById("textSize");
 const textBold = document.getElementById("textBold");
 
+// helpers
 function show(view){
   authView.classList.add("hidden");
   pendingView.classList.add("hidden");
@@ -110,6 +117,11 @@ function setMsg(el, text, ok=false){
   if(!el) return;
   el.textContent = text || "";
   el.style.color = ok ? "#1f7a44" : "#8a1b3d";
+}
+function esc(s=""){
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
 }
 
 // Tabs
@@ -148,6 +160,7 @@ btnSignUp.onclick = async () => {
       approved: false,
       isAdmin: false,
       denied: false,
+      nickname: "",
       createdAt: serverTimestamp()
     });
 
@@ -168,19 +181,38 @@ btnSignIn.onclick = async () => {
 
 btnSignOut.onclick = () => signOut(auth);
 
-// Admin approvals
+// ===== Nickname map (for chat labels) =====
+let uidToName = {};
+let usersUnsub = null;
+
+function startUsersRealtime(){
+  if (usersUnsub) usersUnsub();
+  usersUnsub = onSnapshot(collection(db, "users"), (snap)=>{
+    const map = {};
+    snap.forEach(d=>{
+      const u = d.data();
+      map[d.id] = u.nickname?.trim() || u.email || d.id;
+    });
+    uidToName = map;
+  });
+}
+function displayNameFor(uid, fallbackEmail=""){
+  return uidToName[uid] || fallbackEmail || uid || "Someone";
+}
+
+// ===== Admin approvals (pending list) =====
 async function loadPendingUsers(){
   pendingList.innerHTML = "";
-  setMsg(adminMsg, "Loading pending users…", true);
+  setMsg(adminMsg, "Loading…", true);
 
   try{
-    const q = query(
+    const qPend = query(
       collection(db, "users"),
       where("approved", "==", false),
       where("denied", "==", false)
     );
 
-    const snap = await getDocs(q);
+    const snap = await getDocs(qPend);
 
     if(snap.empty){
       setMsg(adminMsg, "No pending users right now 💗", true);
@@ -196,7 +228,7 @@ async function loadPendingUsers(){
       row.className = "item";
 
       const left = document.createElement("div");
-      left.innerHTML = `<div><b>${u.email || "(no email)"}</b></div><small>${d.id}</small>`;
+      left.innerHTML = `<div><b>${esc(u.email || "(no email)")}</b></div><small>${esc(d.id)}</small>`;
 
       const actions = document.createElement("div");
       actions.className = "actions";
@@ -243,7 +275,123 @@ async function loadPendingUsers(){
 }
 btnRefreshUsers?.addEventListener("click", loadPendingUsers);
 
-// Upload to R2
+// ===== Admin: All accounts list =====
+let accountsUnsub = null;
+
+function startAccountsRealtime(isAdmin){
+  if (!accountsList) return;
+  if (accountsUnsub) accountsUnsub();
+  if (!isAdmin) return;
+
+  const qAll = query(collection(db, "users"), orderBy("createdAt"), limit(500));
+
+  accountsUnsub = onSnapshot(qAll, (snap)=>{
+    accountsList.innerHTML = "";
+
+    snap.forEach((d)=>{
+      const u = d.data();
+      const uid = d.id;
+
+      const status = u.denied ? "Denied" : (u.approved ? "Approved" : "Pending");
+      const name = (u.nickname?.trim() || "");
+      const email = u.email || "";
+      const isMe = auth.currentUser?.uid === uid;
+
+      const row = document.createElement("div");
+      row.className = "item";
+
+      const left = document.createElement("div");
+      left.innerHTML = `
+        <div><b>${esc(name || email || uid)}</b> <small>(${esc(status)})</small></div>
+        <small>${esc(email)} · ${esc(uid)}</small>
+      `;
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const nickBtn = document.createElement("button");
+      nickBtn.className = "btn";
+      nickBtn.textContent = "Set Display Name";
+      nickBtn.onclick = async ()=>{
+        const current = u.nickname || "";
+        const next = prompt("Display name for everyone to see:", current);
+        if (next === null) return;
+        await updateDoc(doc(db, "users", uid), { nickname: String(next).trim() });
+      };
+
+      const blockBtn = document.createElement("button");
+      blockBtn.className = "btn";
+      blockBtn.textContent = u.denied ? "Unblock" : "Block";
+      blockBtn.onclick = async ()=>{
+        if (!confirm(`${u.denied ? "Unblock" : "Block"} this user?`)) return;
+        await updateDoc(doc(db, "users", uid), {
+          denied: !u.denied,
+          approved: u.denied ? true : false // if blocking, revoke approved
+        });
+      };
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "btn primary";
+      deleteBtn.textContent = "Delete Access";
+      deleteBtn.onclick = async ()=>{
+        if (!confirm("This will block them and remove their profile doc. Continue?")) return;
+
+        // Best-effort: block first so they can't use it
+        try{
+          await updateDoc(doc(db, "users", uid), { denied:true, approved:false });
+        }catch{}
+
+        // delete user doc (profile)
+        await deleteDoc(doc(db, "users", uid));
+      };
+
+      // safety: don't let you delete your own doc by accident
+      if (isMe){
+        deleteBtn.disabled = true;
+        deleteBtn.title = "Can't delete your own account doc.";
+      }
+
+      actions.appendChild(nickBtn);
+      actions.appendChild(blockBtn);
+      actions.appendChild(deleteBtn);
+
+      row.appendChild(left);
+      row.appendChild(actions);
+      accountsList.appendChild(row);
+    });
+  });
+}
+
+// ===== Admin: Clear chat =====
+async function clearChat(isAdmin){
+  if (!isAdmin) return;
+  if (!confirm("Clear ALL chat messages for everyone?")) return;
+
+  btnClearChat.disabled = true;
+  setMsg(adminMsg, "Clearing chat…", true);
+
+  try{
+    const snap = await getDocs(collection(db, "messages"));
+    let count = 0;
+
+    for (const d of snap.docs){
+      await deleteDoc(doc(db, "messages", d.id));
+      count++;
+    }
+
+    setMsg(adminMsg, `Chat cleared ✅ (${count} deleted)`, true);
+  }catch(e){
+    setMsg(adminMsg, e.message);
+  }finally{
+    btnClearChat.disabled = false;
+  }
+}
+btnClearChat?.addEventListener("click", async ()=>{
+  // isAdmin is set later after auth loads; we store it on window for ease
+  await clearChat(!!window.__isAdmin);
+});
+
+// ===== Upload to R2 =====
 async function uploadImageToR2(file) {
   const token = await auth.currentUser.getIdToken();
   const res = await fetch(`${WORKER_URL}/upload`, {
@@ -260,7 +408,7 @@ async function uploadImageToR2(file) {
   return await res.json(); // { key }
 }
 
-// Fetch blob
+// ===== Fetch blob =====
 async function fetchImageBlob(key) {
   const token = await auth.currentUser.getIdToken();
   const res = await fetch(`${WORKER_URL}/media/${encodeURIComponent(key)}`, {
@@ -270,7 +418,7 @@ async function fetchImageBlob(key) {
   return await res.blob();
 }
 
-// Download
+// ===== Download =====
 async function downloadBlob(blob, filename) {
   const a = document.createElement("a");
   const url = URL.createObjectURL(blob);
@@ -282,7 +430,7 @@ async function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1200);
 }
 
-// Fullscreen viewer state
+// ===== Fullscreen viewer state =====
 let openKey = null;
 let openFilename = null;
 let openContentType = null;
@@ -343,49 +491,145 @@ saveDeviceBtn?.addEventListener("click", async ()=>{
   }
 });
 
-// Saved tab realtime
+// ===== Saved tab: select + unsave =====
+let savedSelectMode = false;
+let selectedSavedIds = new Set();
+let lastSavedDocs = []; // keep current docs list for select all
+
+function updateSavedToolbar(){
+  if (!savedSelectBtn) return;
+
+  if (!savedSelectMode){
+    savedSelectBtn.textContent = "Select";
+    savedSelectAllBtn?.classList.add("hidden");
+    savedUnsaveBtn?.classList.add("hidden");
+    savedUnsaveBtn && (savedUnsaveBtn.disabled = true);
+    selectedSavedIds.clear();
+  }else{
+    savedSelectBtn.textContent = "Done";
+    savedSelectAllBtn?.classList.remove("hidden");
+    savedUnsaveBtn?.classList.remove("hidden");
+    savedUnsaveBtn && (savedUnsaveBtn.disabled = selectedSavedIds.size === 0);
+  }
+}
+
+savedSelectBtn?.addEventListener("click", ()=>{
+  savedSelectMode = !savedSelectMode;
+  if (!savedSelectMode) selectedSavedIds.clear();
+  updateSavedToolbar();
+  renderSavedGrid(lastSavedDocs); // re-render with/without badges
+});
+
+savedSelectAllBtn?.addEventListener("click", ()=>{
+  if (!savedSelectMode) return;
+  if (selectedSavedIds.size === lastSavedDocs.length){
+    selectedSavedIds.clear();
+  } else {
+    selectedSavedIds = new Set(lastSavedDocs.map(d => d.id));
+  }
+  updateSavedToolbar();
+  renderSavedGrid(lastSavedDocs);
+});
+
+savedUnsaveBtn?.addEventListener("click", async ()=>{
+  if (!savedSelectMode) return;
+  if (selectedSavedIds.size === 0) return;
+
+  if (!confirm(`Unsave ${selectedSavedIds.size} image(s)?`)) return;
+
+  savedUnsaveBtn.disabled = true;
+
+  try{
+    for (const id of selectedSavedIds){
+      await deleteDoc(doc(db, "saved", id));
+    }
+    selectedSavedIds.clear();
+    updateSavedToolbar();
+  }catch(e){
+    alert(e.message);
+  }finally{
+    savedUnsaveBtn.disabled = false;
+  }
+});
+
+function renderSavedGrid(docs){
+  if(!savedGrid) return;
+  savedGrid.innerHTML = "";
+
+  docs.forEach(({ id, data })=>{
+    const s = data;
+
+    const card = document.createElement("div");
+    card.className = "savedCard";
+
+    const img = document.createElement("img");
+    img.className = "savedThumb";
+    img.alt = "saved";
+
+    // selection UI
+    if (savedSelectMode){
+      const selected = selectedSavedIds.has(id);
+      if (selected) card.classList.add("selected");
+
+      const badge = document.createElement("div");
+      badge.className = "selBadge";
+      badge.textContent = selected ? "✓" : "○";
+      card.appendChild(badge);
+    }
+
+    (async ()=>{
+      try{
+        const blob = await fetchImageBlob(s.key);
+        img.src = URL.createObjectURL(blob);
+
+        img.addEventListener("click", ()=>{
+          if (savedSelectMode){
+            if (selectedSavedIds.has(id)) selectedSavedIds.delete(id);
+            else selectedSavedIds.add(id);
+            updateSavedToolbar();
+            renderSavedGrid(lastSavedDocs);
+            return;
+          }
+
+          openFullscreenWithBlob(blob, { key:s.key, filename:s.filename, contentType:s.contentType });
+        });
+      }catch{
+        img.src = "";
+      }
+    })();
+
+    const meta = document.createElement("div");
+    meta.className = "muted tiny";
+    meta.textContent = s.filename || "image";
+
+    card.appendChild(img);
+    card.appendChild(meta);
+    savedGrid.appendChild(card);
+  });
+
+  if (savedSelectMode){
+    savedUnsaveBtn && (savedUnsaveBtn.disabled = selectedSavedIds.size === 0);
+  }
+}
+
 function startSavedRealtime(){
   if(!savedGrid) return;
 
   const qSaved = query(collection(db, "saved"), orderBy("savedAt"), limit(200));
 
   onSnapshot(qSaved, (snap) => {
-    savedGrid.innerHTML = "";
+    const docs = [];
+    snap.forEach((d)=> docs.push({ id: d.id, data: d.data() }));
+    lastSavedDocs = docs;
 
-    snap.forEach((d)=>{
-      const s = d.data();
-
-      const card = document.createElement("div");
-      card.className = "savedCard";
-
-      const img = document.createElement("img");
-      img.className = "savedThumb";
-      img.alt = "saved";
-
-      (async ()=>{
-        try{
-          const blob = await fetchImageBlob(s.key);
-          img.src = URL.createObjectURL(blob);
-          img.addEventListener("click", ()=>{
-            openFullscreenWithBlob(blob, { key:s.key, filename:s.filename, contentType:s.contentType });
-          });
-        }catch{
-          img.src = "";
-        }
-      })();
-
-      const meta = document.createElement("div");
-      meta.className = "muted tiny";
-      meta.textContent = s.filename || "image";
-
-      card.appendChild(img);
-      card.appendChild(meta);
-      savedGrid.appendChild(card);
-    });
+    renderSavedGrid(docs);
   });
+
+  // init toolbar
+  updateSavedToolbar();
 }
 
-// Chat realtime
+// ===== Chat realtime (with display name label) =====
 function startChatRealtime(){
   if(!chatBox) return;
 
@@ -449,8 +693,16 @@ function startChatRealtime(){
       const div = document.createElement("div");
       div.className = "msgBubble " + (mine ? "msgMe" : "msgOther");
 
+      // name label
+      const meta = document.createElement("div");
+      meta.className = "msgMeta";
+      meta.textContent = mine ? "You" : displayNameFor(m.uid, m.email);
+      div.appendChild(meta);
+
+      const body = document.createElement("div");
+
       if (m.kind === "image") {
-        div.textContent = mine ? "📸 You sent a pic" : "📸 Tap to view pic";
+        body.textContent = mine ? "📸 You sent a pic" : "📸 Tap to view pic";
         div.classList.add("snap");
 
         const viewDocRef = doc(db, "messages", d.id, "views", auth.currentUser.uid);
@@ -459,11 +711,11 @@ function startChatRealtime(){
           if (vs.exists()) {
             div.classList.remove("snap");
             div.classList.add("opened");
-            div.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
+            body.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
           }
         });
 
-        div.addEventListener("click", async () => {
+        body.addEventListener("click", async () => {
           const vs = await getDoc(viewDocRef);
           if (vs.exists()) return;
 
@@ -475,16 +727,17 @@ function startChatRealtime(){
 
             div.classList.remove("snap");
             div.classList.add("opened");
-            div.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
+            body.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
           } catch (e) {
             alert(e.message);
           }
         });
 
       } else {
-        div.textContent = m.text || "";
+        body.textContent = m.text || "";
       }
 
+      div.appendChild(body);
       chatBox.appendChild(div);
     });
 
@@ -511,11 +764,9 @@ function startDrawingBoard(){
   let boldOn = false;
   textBold?.addEventListener("click", ()=>{
     boldOn = !boldOn;
-    textBold.classList.toggle("activeBold", boldOn);
     textBold.textContent = boldOn ? "B ✓" : "B";
   });
 
-  // toggle text controls visibility based on tool mode
   function refreshToolUI(){
     const mode = toolMode?.value || "brush";
     if (textControls) textControls.style.display = (mode === "text") ? "flex" : "none";
@@ -523,7 +774,7 @@ function startDrawingBoard(){
   toolMode?.addEventListener("change", refreshToolUI);
   refreshToolUI();
 
-  // undo/redo stacks
+  // undo/redo
   const UNDO_LIMIT = 30;
   let undoStack = [];
   let redoStack = [];
@@ -721,26 +972,22 @@ function startDrawingBoard(){
     drawStrokeSegment(ma, mb, s, pressure);
   }
 
-  // --------- BUCKET FILL ----------
+  // BUCKET FILL
   function hexToRgb(hex){
     const h = hex.replace("#","");
     const n = parseInt(h.length===3 ? h.split("").map(c=>c+c).join("") : h, 16);
     return { r:(n>>16)&255, g:(n>>8)&255, b:n&255, a:255 };
   }
-
   function colorAt(data, idx){
     return { r:data[idx], g:data[idx+1], b:data[idx+2], a:data[idx+3] };
   }
-
   function setColor(data, idx, c){
     data[idx]=c.r; data[idx+1]=c.g; data[idx+2]=c.b; data[idx+3]=255;
   }
-
   function distColor(c1,c2){
     const dr=c1.r-c2.r, dg=c1.g-c2.g, db=c1.b-c2.b, da=c1.a-c2.a;
     return Math.sqrt(dr*dr+dg*dg+db*db+da*da);
   }
-
   function bucketFill(x,y){
     const tol = Number(fillTol?.value || 24);
     const target = hexToRgb(penColor?.value || "#ff4fa5");
@@ -754,8 +1001,6 @@ function startDrawingBoard(){
     const sy = Math.max(0, Math.min(h-1, Math.floor(y)));
     const startIdx = (sy*w + sx) * 4;
     const startCol = colorAt(data, startIdx);
-
-    // if already basically same color, do nothing
     if (distColor(startCol, target) <= 1) return;
 
     const visited = new Uint8Array(w*h);
@@ -769,7 +1014,6 @@ function startDrawingBoard(){
 
       const idx = pos*4;
       const cur = colorAt(data, idx);
-
       if (distColor(cur, startCol) > tol) continue;
 
       setColor(data, idx, target);
@@ -782,19 +1026,17 @@ function startDrawingBoard(){
 
     ctx.putImageData(img,0,0);
 
-    // symmetry fill: mirror same point
     if (symmetry){
       const mx = (w/2) + ((w/2) - sx);
       const my = sy;
-      // run a second fill using same start color at mirrored pixel
-      // (best effort — will fill mirrored region)
+
       const img2 = ctx.getImageData(0,0,w,h);
       const data2 = img2.data;
-
       const msx = Math.max(0, Math.min(w-1, Math.floor(mx)));
       const msy = Math.max(0, Math.min(h-1, Math.floor(my)));
       const mStartIdx = (msy*w + msx) * 4;
       const mStartCol = colorAt(data2, mStartIdx);
+
       const visited2 = new Uint8Array(w*h);
       const stack2 = [[msx, msy]];
 
@@ -806,8 +1048,8 @@ function startDrawingBoard(){
 
         const idx = pos*4;
         const cur = colorAt(data2, idx);
-
         if (distColor(cur, mStartCol) > tol) continue;
+
         setColor(data2, idx, target);
 
         if (cx>0) stack2.push([cx-1, cy]);
@@ -815,18 +1057,18 @@ function startDrawingBoard(){
         if (cy>0) stack2.push([cx, cy-1]);
         if (cy<h-1) stack2.push([cx, cy+1]);
       }
+
       ctx.putImageData(img2,0,0);
     }
   }
 
-  // --------- TEXT TOOL ----------
+  // TEXT TOOL
   function fontFamilyFromSelect(v){
     if (v === "serif") return "Georgia, 'Times New Roman', serif";
     if (v === "mono") return "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
     if (v === "cursive") return "'Comic Sans MS', 'Brush Script MT', cursive";
     return "system-ui, -apple-system, Segoe UI, Roboto, Arial";
   }
-
   function placeText(x,y){
     const txt = (textValue?.value || "").trim();
     if (!txt) return alert("Type something first 🙂");
@@ -844,11 +1086,8 @@ function startDrawingBoard(){
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
     ctx.font = `${weight} ${size}px ${family}`;
-
-    // slight shadow for aesthetics (tiny)
     ctx.shadowBlur = 2;
     ctx.shadowColor = "rgba(0,0,0,.15)";
-
     ctx.fillText(txt, x, y);
 
     if (symmetry){
@@ -856,7 +1095,6 @@ function startDrawingBoard(){
       const mx = cx + (cx - x);
       ctx.fillText(txt, mx, y);
     }
-
     ctx.restore();
   }
 
@@ -867,7 +1105,6 @@ function startDrawingBoard(){
   function onDown(e){
     const mode = toolMode?.value || "brush";
 
-    // BUCKET
     if (mode === "bucket"){
       snapshot();
       const p = canvasPoint(e);
@@ -876,7 +1113,6 @@ function startDrawingBoard(){
       return;
     }
 
-    // TEXT
     if (mode === "text"){
       const p = canvasPoint(e);
       placeText(p.x, p.y);
@@ -884,10 +1120,8 @@ function startDrawingBoard(){
       return;
     }
 
-    // BRUSH
     drawing = true;
     snapshot();
-
     const raw = canvasPoint(e);
     smoothLast = { ...raw };
     drawCanvas.setPointerCapture?.(e.pointerId);
@@ -915,34 +1149,6 @@ function startDrawingBoard(){
   drawCanvas.addEventListener("pointermove", (e)=>{ e.preventDefault(); onMove(e); });
   window.addEventListener("pointerup", onUp);
   window.addEventListener("pointercancel", onUp);
-
-  // Save drawing
-  saveDrawBtn?.addEventListener("click", async ()=>{
-    try{
-      saveDrawBtn.disabled = true;
-
-      const blob = await new Promise((resolve)=> drawCanvas.toBlob(resolve, "image/png", 1));
-      if(!blob) throw new Error("Could not save drawing.");
-
-      const file = new File([blob], `drawing_${Date.now()}.png`, { type:"image/png" });
-      const { key } = await uploadImageToR2(file);
-
-      await addDoc(collection(db, "drawings"), {
-        key,
-        filename: file.name,
-        contentType: "image/png",
-        uid: auth.currentUser.uid,
-        email: auth.currentUser.email,
-        createdAt: serverTimestamp()
-      });
-
-      alert("Saved 💗");
-    }catch(e){
-      alert(e.message);
-    }finally{
-      saveDrawBtn.disabled = false;
-    }
-  });
 
   updateUndoRedoButtons();
 }
@@ -1006,6 +1212,7 @@ onAuthStateChanged(auth, async (user)=>{
       approved: false,
       isAdmin: false,
       denied: false,
+      nickname: "",
       createdAt: serverTimestamp()
     });
     show(pendingView);
@@ -1021,11 +1228,24 @@ onAuthStateChanged(auth, async (user)=>{
 
   show(appView);
 
-  if(data.isAdmin) adminTabBtn?.classList.remove("hidden");
+  const isAdmin = !!data.isAdmin;
+  window.__isAdmin = isAdmin;
+
+  // start nickname map for everyone
+  startUsersRealtime();
+
+  if(isAdmin) adminTabBtn?.classList.remove("hidden");
   else adminTabBtn?.classList.add("hidden");
 
+  // start features
   startChatRealtime();
   startSavedRealtime();
   startDrawingBoard();
   startDrawGallery();
+
+  // admin features
+  if (isAdmin){
+    loadPendingUsers();
+    startAccountsRealtime(true);
+  }
 });
