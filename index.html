@@ -1,302 +1,550 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Our Little Hub 💗</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Love Hub</title>
+
+  <style>
+    :root{
+      --bg:#0b0b12;
+      --panel:#111122;
+      --panel2:#14142a;
+      --card:#171735;
+      --text:#f7f2ff;
+      --muted:#b9b2c9;
+      --pink:#ff5ca9;
+      --pink2:#ff7cc2;
+      --line:rgba(255,255,255,.10);
+      --ok:#1f7a44;
+      --bad:#8a1b3d;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:radial-gradient(1200px 800px at 20% 0%, rgba(255,92,169,.18), transparent 50%),
+                 radial-gradient(900px 700px at 90% 20%, rgba(150,120,255,.16), transparent 55%),
+                 var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    a{color:inherit}
+    .hidden{display:none !important}
+
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 16px;border:1px solid var(--line);border-radius:18px;
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      backdrop-filter: blur(10px);
+      position:sticky;top:10px;z-index:20;
+    }
+    .brand{
+      display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.4px;
+    }
+    .dot{
+      width:14px;height:14px;border-radius:50%;
+      background:linear-gradient(135deg,var(--pink),#b66bff);
+      box-shadow:0 0 20px rgba(255,92,169,.35);
+    }
+    .btn{
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      transition:.15s;
+      font-weight:650;
+    }
+    .btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.18)}
+    .btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+    .btn.primary{
+      background:linear-gradient(135deg,var(--pink),#b66bff);
+      border-color:transparent;
+      box-shadow:0 8px 22px rgba(255,92,169,.22);
+    }
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .card{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border-radius:18px;
+      padding:14px;
+    }
+    .muted{color:var(--muted)}
+    .tiny{font-size:12px}
+    .input, input[type="email"], input[type="password"], input[type="text"], input[type="date"], input[type="time"], textarea, select{
+      width:100%;
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      color:var(--text);
+      padding:11px 12px;
+      border-radius:14px;
+      outline:none;
+    }
+    textarea{min-height:86px;resize:vertical}
+    select{cursor:pointer}
+    .tabs{
+      display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;
+    }
+    .tab{
+      padding:10px 12px;border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      cursor:pointer;
+      font-weight:700;
+    }
+    .tab.active{
+      background:linear-gradient(135deg, rgba(255,92,169,.25), rgba(182,107,255,.18));
+      border-color:rgba(255,255,255,.18);
+      box-shadow:0 10px 26px rgba(255,92,169,.10);
+    }
+    .panel{margin-top:14px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:800px){.grid2{grid-template-columns:1fr}}
+
+    /* Chat */
+    #chatBox{
+      height:420px;overflow:auto;
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:12px;
+      background:rgba(0,0,0,.18);
+    }
+    .msgBubble{
+      max-width:75%;
+      padding:10px 12px;
+      border-radius:18px;
+      margin:8px 0;
+      border:1px solid rgba(255,255,255,.10);
+      user-select:none;
+      cursor:default;
+    }
+    .msgMe{margin-left:auto;background:rgba(255,92,169,.18)}
+    .msgOther{margin-right:auto;background:rgba(255,255,255,.06)}
+    .msgBubble.snap{
+      cursor:pointer;
+      background:linear-gradient(135deg, rgba(255,92,169,.22), rgba(182,107,255,.16));
+      border-color:rgba(255,255,255,.14);
+    }
+    .msgBubble.opened{
+      opacity:.75;
+      background:rgba(255,255,255,.04);
+      cursor:default;
+    }
+
+    /* Modal */
+    #imgModal{
+      position:fixed;inset:0;z-index:50;
+      background:rgba(0,0,0,.78);
+      display:flex;align-items:center;justify-content:center;
+      padding:18px;
+    }
+    .modalInner{
+      width:min(980px, 100%);
+      background:rgba(20,20,42,.92);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:22px;
+      overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,.45);
+    }
+    .modalTop{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 12px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .modalTop .leftTitle{font-weight:800}
+    .modalBody{
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    #modalImg{
+      width:100%;
+      max-height:72vh;
+      object-fit:contain;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.25);
+    }
+    .modalActions{display:flex;gap:10px;flex-wrap:wrap}
+    .closeX{font-size:18px;line-height:1;padding:10px 12px}
+
+    /* Saved grid */
+    #savedGrid, #drawGallery{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+      gap:12px;
+    }
+    .savedCard{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      overflow:hidden;
+      background:rgba(255,255,255,.04);
+      padding:10px;
+    }
+    .savedThumb{
+      width:100%;
+      height:170px;
+      object-fit:cover;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.18);
+      cursor:pointer;
+    }
+
+    /* Items list */
+    .item{
+      display:flex;align-items:flex-start;justify-content:space-between;
+      gap:12px;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);
+      margin-bottom:10px;
+    }
+    .actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+
+    /* Love hero */
+    #loveHero{
+      border-radius:22px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+      background:linear-gradient(135deg, rgba(255,92,169,.20), rgba(182,107,255,.14));
+      padding:16px;
+      position:relative;
+      min-height:180px;
+    }
+    .loveOverlay{
+      backdrop-filter: blur(10px);
+      background:rgba(10,10,18,.60);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:14px;
+      max-width:540px;
+    }
+    .loveBig{
+      font-size:30px;
+      font-weight:900;
+      letter-spacing:.3px;
+      margin:0 0 8px 0;
+    }
+    .loveStats{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+    .stat{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      padding:10px 12px;
+      min-width:120px;
+    }
+    .stat b{font-size:20px}
+    .loveTotals{
+      margin-top:10px;
+      display:flex;gap:10px;flex-wrap:wrap;
+    }
+
+    /* Draw */
+    .canvasWrap{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:22px;
+      background:rgba(0,0,0,.18);
+      padding:12px;
+    }
+    #drawCanvas{
+      width:100%;
+      height:auto;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.10);
+      background:#fff;
+      touch-action:none;
+      display:block;
+    }
+    .toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-bottom:10px;
+    }
+
+    /* Calendar */
+    .calForm{display:grid;grid-template-columns:1.2fr .8fr .7fr;gap:10px}
+    @media (max-width:900px){.calForm{grid-template-columns:1fr}}
+  </style>
 </head>
+
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">💗</div>
-      <div>
-        <div class="title">Our Little Hub</div>
-        <div class="subtitle">private + cute</div>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="dot"></div>
+        <div>Love Hub</div>
+      </div>
+      <div class="row">
+        <button id="btnSignOut" class="btn hidden">Sign Out</button>
       </div>
     </div>
-    <button id="btnSignOut" class="pill hidden">Sign out</button>
-  </header>
 
-  <!-- AUTH -->
-  <main id="authView" class="card">
-    <h2>Welcome 💕</h2>
-    <p class="muted">Sign in or create an account. New accounts must be approved.</p>
-
-    <div class="row">
-      <input id="email" class="input" type="email" placeholder="Email" autocomplete="email">
-      <input id="password" class="input" type="password" placeholder="Password" autocomplete="current-password">
-    </div>
-
-    <div class="row">
-      <button id="btnSignIn" class="btn primary">Sign In</button>
-      <button id="btnSignUp" class="btn">Sign Up</button>
-    </div>
-
-    <div id="authMsg" class="msg"></div>
-  </main>
-
-  <!-- PENDING -->
-  <main id="pendingView" class="card hidden">
-    <h2>Pending approval 🌸</h2>
-    <p class="muted">
-      Your account is created, but not approved yet.<br/>
-      Once approved, this page will unlock automatically.
-    </p>
-    <div class="heartbox">✨ 💗 ✨</div>
-  </main>
-
-  <!-- APP -->
-  <main id="appView" class="app hidden">
-    <nav class="tabs">
-      <button class="tab active" data-tab="chat">💬 Chat</button>
-      <button class="tab" data-tab="saved">💾 Saved</button>
-      <button class="tab" data-tab="draw">🎨 Draw</button>
-      <button class="tab" data-tab="love">💞 Love</button>
-      <button class="tab" data-tab="calendar">📅 Calendar</button>
-      <button class="tab adminOnly hidden" data-tab="admin">🛡️ Admin</button>
-    </nav>
-
-    <!-- CHAT -->
-    <section class="panel" id="tab-chat">
-      <h3>Chat 💬</h3>
-      <div id="chatBox" class="chatBox"></div>
-
-      <div class="chatInput">
-        <input id="chatText" class="input" placeholder="Type something cute… 💗" />
-        <button id="sendBtn" class="btn primary">Send</button>
-
-        <input id="imgPick" type="file" accept="image/*" class="filePick" />
-        <button id="sendImgBtn" class="btn">Send Pic 📸</button>
-      </div>
-
-      <p class="muted tiny">Tap a pic message to open it fullscreen.</p>
-    </section>
-
-    <!-- SAVED -->
-    <section class="panel hidden" id="tab-saved">
-      <div class="panelTop">
-        <div>
-          <h3>Saved 💾</h3>
-          <p class="muted">Pics you saved in chat show up here for both of you.</p>
+    <!-- AUTH VIEW -->
+    <div id="authView" class="panel">
+      <div class="card">
+        <h2 style="margin:0 0 10px 0;">Sign In</h2>
+        <div class="grid2">
+          <div>
+            <label class="tiny muted">Email</label>
+            <input id="email" type="email" placeholder="you@email.com" />
+          </div>
+          <div>
+            <label class="tiny muted">Password</label>
+            <input id="password" type="password" placeholder="••••••••" />
+          </div>
         </div>
 
-        <div class="panelActions">
-          <button id="savedSelectBtn" class="btn">Select</button>
-          <button id="savedSelectAllBtn" class="btn hidden">Select All</button>
-          <button id="savedUnsaveBtn" class="btn primary hidden" disabled>Unsave</button>
+        <div class="row" style="margin-top:12px;">
+          <button id="btnSignIn" class="btn primary">Sign In</button>
+          <button id="btnSignUp" class="btn">Sign Up</button>
+        </div>
+        <div id="authMsg" class="muted" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- PENDING VIEW -->
+    <div id="pendingView" class="panel hidden">
+      <div class="card">
+        <h2 style="margin:0 0 8px 0;">Waiting for approval 💗</h2>
+        <div class="muted">
+          Your account is pending. The admin must approve you before you can enter.
         </div>
       </div>
+    </div>
 
-      <div id="savedGrid" class="savedGrid"></div>
-    </section>
+    <!-- APP VIEW -->
+    <div id="appView" class="panel hidden">
+      <div class="tabs">
+        <div class="tab active" data-tab="chat">Chat</div>
+        <div class="tab" data-tab="saved">Saved</div>
+        <div class="tab" data-tab="draw">Draw</div>
+        <div class="tab" data-tab="love">Love</div>
+        <div class="tab" data-tab="calendar">Calendar</div>
+        <div class="tab hidden" data-tab="admin">Admin</div>
+      </div>
 
-    <!-- DRAW -->
-    <section class="panel hidden" id="tab-draw">
-      <h3>Draw 🎨</h3>
+      <!-- CHAT -->
+      <div id="tab-chat" class="panel">
+        <div class="card">
+          <div id="chatBox"></div>
 
-      <div class="drawBar">
-        <div class="drawRow">
-          <div class="drawGroup">
-            <label class="muted tiny">Tool</label>
-            <select id="toolMode" class="select">
-              <option value="brush">Brush</option>
-              <option value="bucket">Fill Bucket 🪣</option>
-              <option value="text">Text 🔤</option>
-            </select>
+          <div class="row" style="margin-top:12px;">
+            <input id="chatText" class="input" type="text" placeholder="Type a message..." style="flex:1;" />
+            <button id="sendBtn" class="btn primary">Send</button>
           </div>
 
-          <div class="drawGroup">
-            <label class="muted tiny">Brush</label>
-            <select id="brushType" class="select">
-              <option value="pen">Pen</option>
-              <option value="pencil">Pencil</option>
+          <div class="row" style="margin-top:10px; align-items:center;">
+            <input id="imgPick" type="file" accept="image/*" class="input" style="flex:1;" />
+            <button id="sendImgBtn" class="btn">Send Pic</button>
+          </div>
+
+          <div class="tiny muted" style="margin-top:10px;">
+            Image messages are view-once. Tap anywhere on the pic bubble to open fullscreen.
+          </div>
+        </div>
+      </div>
+
+      <!-- SAVED -->
+      <div id="tab-saved" class="panel hidden">
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:center;">
+            <div>
+              <h2 style="margin:0;">Saved</h2>
+              <div id="savedSelectHint" class="tiny muted"></div>
+            </div>
+            <div class="row">
+              <button id="btnSavedSelect" class="btn">Select</button>
+              <button id="btnSavedUnsave" class="btn" disabled>Unsave</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;" id="savedGrid"></div>
+        </div>
+      </div>
+
+      <!-- DRAW -->
+      <div id="tab-draw" class="panel hidden">
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:center;">
+            <h2 style="margin:0;">Draw</h2>
+            <button id="drawFullscreenBtn" class="btn">Fullscreen</button>
+          </div>
+
+          <div class="toolbar" style="margin-top:12px;">
+            <select id="brushType">
+              <option value="round">Round</option>
               <option value="marker">Marker</option>
-              <option value="highlighter">Highlighter</option>
               <option value="spray">Spray</option>
-              <option value="calligraphy">Calligraphy</option>
-              <option value="neon">Neon</option>
-              <option value="watercolor">Watercolor-ish</option>
-              <option value="eraser">Eraser</option>
-            </select>
-          </div>
-
-          <div class="drawGroup">
-            <label class="muted tiny">Color</label>
-            <input id="penColor" type="color" value="#ff4fa5"/>
-          </div>
-
-          <div class="drawGroup">
-            <label class="muted tiny">Size</label>
-            <input id="penSize" type="range" min="1" max="80" value="12"/>
-          </div>
-
-          <div class="drawGroup">
-            <label class="muted tiny">Opacity</label>
-            <input id="penOpacity" type="range" min="5" max="100" value="85"/>
-          </div>
-
-          <div class="drawGroup">
-            <label class="muted tiny">Smoothing</label>
-            <input id="penSmooth" type="range" min="0" max="90" value="35"/>
-          </div>
-
-          <div class="drawGroup">
-            <label class="muted tiny">Fill Tolerance</label>
-            <input id="fillTol" type="range" min="0" max="80" value="24"/>
-          </div>
-        </div>
-
-        <div class="drawRow">
-          <div class="drawTextBox" id="textControls">
-            <label class="muted tiny">Text</label>
-            <input id="textValue" class="input small" placeholder="Type text…"/>
-
-            <label class="muted tiny">Font</label>
-            <select id="textFont" class="select">
-              <option value="system">System</option>
-              <option value="serif">Serif</option>
-              <option value="mono">Mono</option>
-              <option value="cursive">Cursive</option>
             </select>
 
-            <label class="muted tiny">Size</label>
-            <input id="textSize" type="range" min="10" max="120" value="44"/>
+            <input id="penColor" type="color" value="#ff5ca9" title="Color" />
+            <label class="tiny muted">Size</label>
+            <input id="penSize" type="range" min="1" max="60" value="10" />
+            <label class="tiny muted">Opacity</label>
+            <input id="penOpacity" type="range" min="0.05" max="1" step="0.05" value="1" />
+            <label class="tiny muted">Smoothing</label>
+            <input id="penSmooth" type="range" min="0" max="0.95" step="0.05" value="0.25" />
 
-            <button id="textBold" class="btn">B</button>
-            <div class="muted tiny tip">Tap canvas to place text.</div>
-          </div>
-
-          <div class="drawBtns">
-            <button id="undoBtn" class="btn">↩ Undo</button>
-            <button id="redoBtn" class="btn">↪ Redo</button>
-            <button id="symBtn" class="btn">🪞 Symmetry: Off</button>
+            <button id="penBtn" class="btn primary">Pen</button>
+            <button id="eraserBtn" class="btn">Eraser</button>
+            <button id="fillBtn" class="btn">Fill</button>
+            <button id="textToolBtn" class="btn">Text</button>
+            <button id="symmetryBtn" class="btn">Symmetry</button>
+            <button id="undoBtn" class="btn" disabled>Undo</button>
+            <button id="redoBtn" class="btn" disabled>Redo</button>
             <button id="clearBtn" class="btn">Clear</button>
-            <button id="fsDrawBtn" class="btn">⛶ Fullscreen</button>
-            <button id="saveDrawBtn" class="btn primary">Save Drawing 💾</button>
+            <button id="saveDrawBtn" class="btn primary">Save Drawing</button>
+          </div>
+
+          <div class="canvasWrap" style="margin-top:10px;">
+            <!-- Set a default internal resolution that looks good; CSS scales it -->
+            <canvas id="drawCanvas" width="1200" height="700"></canvas>
+          </div>
+
+          <h3 style="margin:16px 0 10px 0;">Gallery</h3>
+          <div id="drawGallery"></div>
+        </div>
+      </div>
+
+      <!-- LOVE -->
+      <div id="tab-love" class="panel hidden">
+        <div id="loveHero">
+          <div class="loveOverlay">
+            <div class="loveBig">💗 Together Since June 18, 2024</div>
+            <div class="muted">“My Love app” vibes — but ours.</div>
+
+            <div class="loveStats">
+              <div class="stat"><div class="tiny muted">Years</div><b id="loveYears">0</b></div>
+              <div class="stat"><div class="tiny muted">Months</div><b id="loveMonths">0</b></div>
+              <div class="stat"><div class="tiny muted">Days</div><b id="loveDaysPart">0</b></div>
+            </div>
+
+            <div class="loveTotals">
+              <div class="stat"><div class="tiny muted">Total Days</div><b id="loveTotalDays">0</b></div>
+              <div class="stat"><div class="tiny muted">Total Hours</div><b id="loveTotalHours">0</b></div>
+              <div class="stat"><div class="tiny muted">Total Minutes</div><b id="loveTotalMinutes">0</b></div>
+            </div>
+
+            <div class="row" style="margin-top:12px;">
+              <button id="loveShareBtn" class="btn primary">Share</button>
+            </div>
+
+            <div class="row" style="margin-top:12px;">
+              <input id="loveBgInput" class="input" type="text" placeholder="Hero background image URL (optional)" style="flex:1;" />
+              <button id="loveBgApply" class="btn">Apply</button>
+              <button id="loveBgClear" class="btn">Clear</button>
+            </div>
+
+            <div class="tiny muted" style="margin-top:8px;">
+              Tip: paste an image URL. It saves in your browser (localStorage).
+            </div>
           </div>
         </div>
       </div>
 
-      <div id="canvasWrap" class="canvasWrap">
-        <canvas id="drawCanvas" width="1200" height="700"></canvas>
-      </div>
+      <!-- CALENDAR -->
+      <div id="tab-calendar" class="panel hidden">
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:center;">
+            <div>
+              <h2 style="margin:0;">Calendar</h2>
+              <div id="calTzLabel" class="tiny muted"></div>
+            </div>
+            <div id="calMsg" class="tiny muted"></div>
+          </div>
 
-      <p class="muted tiny">
-        Tool tips: Bucket fills an area based on tolerance. Text: type then tap canvas. 💗
-      </p>
+          <div class="calForm" style="margin-top:12px;">
+            <div>
+              <label class="tiny muted">Title</label>
+              <input id="calTitle" type="text" placeholder="Dinner date, anniversary, etc." />
+            </div>
+            <div>
+              <label class="tiny muted">Date</label>
+              <input id="calDate" type="date" />
+            </div>
+            <div>
+              <label class="tiny muted">Time</label>
+              <input id="calTime" type="time" />
+            </div>
+          </div>
 
-      <h4 class="mt">Gallery 💗</h4>
-      <div id="drawGallery" class="savedGrid"></div>
-    </section>
+          <div style="margin-top:10px;">
+            <label class="tiny muted">Notes</label>
+            <textarea id="calNotes" placeholder="Optional details…"></textarea>
+          </div>
 
-    <!-- LOVE -->
-   <div id="tab-love" class="panel hidden">
-  <div class="loveCard">
-    <div class="loveTopBar">
-      <button id="loveSettingsBtn" class="loveIconBtn" title="Settings">⚙️</button>
-      <div class="loveTitle">
-        <div class="loveNames" id="loveNames">Bray & Ali</div>
-        <div class="loveSub">private + cute</div>
-      </div>
-      <button id="loveShareBtn" class="loveIconBtn" title="Share">⤴️</button>
-    </div>
+          <div class="row" style="margin-top:10px;">
+            <button id="calAddBtn" class="btn primary">Add Event</button>
+          </div>
 
-    <div class="loveHero" id="loveHero">
-      <!-- optional overlay for sparkle vibe -->
-      <div class="loveHeroGlow"></div>
-    </div>
-
-    <div class="loveDateStrip">
-      <span id="loveStartPretty">June 18, 2024</span>
-    </div>
-
-    <div class="loveBody">
-      <div class="loveBigLabel">YOU HAVE BEEN TOGETHER FOR</div>
-      <div class="loveBigValue" id="loveYMD">—</div>
-
-      <div class="loveDivider"></div>
-
-      <div class="loveBigLabel">IN OTHER WORDS</div>
-
-      <div class="loveStats">
-        <div class="loveStat">
-          <div class="loveStatNum" id="loveMonths">—</div>
-          <div class="loveStatLab">months</div>
-        </div>
-        <div class="loveStat">
-          <div class="loveStatNum" id="loveWeeks">—</div>
-          <div class="loveStatLab">weeks</div>
-        </div>
-        <div class="loveStat">
-          <div class="loveStatNum" id="loveDays2">—</div>
-          <div class="loveStatLab">days</div>
-        </div>
-        <div class="loveStat">
-          <div class="loveStatNum" id="loveHours">—</div>
-          <div class="loveStatLab">hours</div>
+          <h3 style="margin:18px 0 10px 0;">Upcoming</h3>
+          <div id="calList"></div>
         </div>
       </div>
 
-      <div class="loveMini">
-        <span class="dot">💗</span>
-        <span>Next anniversary in</span>
-        <b id="loveNextAnniv">—</b>
-      </div>
+      <!-- ADMIN -->
+      <div id="tab-admin" class="panel hidden">
+        <div class="card">
+          <div class="row" style="justify-content:space-between;align-items:center;">
+            <h2 style="margin:0;">Admin</h2>
+            <div class="row">
+              <button id="btnClearChat" class="btn">Clear Chat</button>
+              <button id="btnRefreshUsers" class="btn primary">Refresh Pending</button>
+              <button id="btnRefreshAccounts" class="btn">Refresh Accounts</button>
+            </div>
+          </div>
 
-      <!-- hidden file input for settings -->
-      <input id="loveBgPick" type="file" accept="image/*" class="hidden" />
-    </div>
-  </div>
-</div>
+          <div id="adminMsg" class="tiny muted" style="margin-top:10px;"></div>
 
+          <h3 style="margin:18px 0 10px 0;">Pending Users</h3>
+          <div id="pendingList"></div>
 
-    <!-- CALENDAR -->
-    <section class="panel hidden" id="tab-calendar">
-      <h3>Calendar 📅</h3>
-      <p class="muted">Next we’ll add events (EST) that you both can see.</p>
-    </section>
+          <h3 style="margin:18px 0 10px 0;">All Accounts</h3>
+          <div id="accountsList"></div>
 
-    <!-- ADMIN -->
-    <section class="panel hidden" id="tab-admin">
-      <h3>Admin 🛡️</h3>
-      <p class="muted">Approve/deny accounts + manage users.</p>
-
-      <div class="adminBox">
-        <div class="adminActions">
-          <button id="btnRefreshUsers" class="btn">Refresh pending</button>
-          <button id="btnClearChat" class="btn primary">Clear Chat 🧹</button>
+          <div class="tiny muted" style="margin-top:10px;">
+            Note: Deleting here removes the Firestore user doc (not the Firebase Auth account).
+          </div>
         </div>
-
-        <div id="adminMsg" class="msg"></div>
-
-        <h4 class="mt">Pending approvals</h4>
-        <div id="pendingList" class="list"></div>
-
-        <h4 class="mt">All accounts</h4>
-        <div id="accountsList" class="list"></div>
-      </div>
-    </section>
-  </main>
-
-  <!-- FULLSCREEN IMAGE VIEWER -->
-  <div id="imgModal" class="fs hidden">
-    <div class="fsTop">
-      <button id="closeModal" class="fsBtn">✕</button>
-      <div class="fsTitle" id="fsTitle">Photo</div>
-      <div class="fsTopRight">
-        <button id="saveChatBtn" class="fsBtn">💾 Save</button>
-        <button id="saveDeviceBtn" class="fsBtn primary">⬇️ Download</button>
       </div>
     </div>
 
-    <div class="fsBody">
-      <img id="modalImg" class="fsImg" alt="photo"/>
+    <!-- FULLSCREEN IMAGE MODAL -->
+    <div id="imgModal" class="hidden">
+      <div class="modalInner">
+        <div class="modalTop">
+          <div class="leftTitle" id="fsTitle">Photo</div>
+          <button id="closeModal" class="btn closeX">✕</button>
+        </div>
+        <div class="modalBody">
+          <img id="modalImg" alt="fullscreen" />
+          <div class="modalActions">
+            <button id="saveChatBtn" class="btn primary">💾 Save</button>
+            <button id="saveDeviceBtn" class="btn">⬇️ Download</button>
+          </div>
+          <div class="tiny muted">
+            Save adds it to Saved tab. Download saves to your device.
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="fsHint muted tiny">Saved adds it to the Saved tab for both of you 💗</div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <!-- IMPORTANT: app.js is a module -->
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
