@@ -77,10 +77,14 @@ const savedGrid = document.getElementById("savedGrid");
 // Draw UI
 const drawCanvas = document.getElementById("drawCanvas");
 const canvasWrap = document.getElementById("canvasWrap");
+const brushType = document.getElementById("brushType");
 const penColor = document.getElementById("penColor");
 const penSize = document.getElementById("penSize");
-const penBtn = document.getElementById("penBtn");
-const eraserBtn = document.getElementById("eraserBtn");
+const penOpacity = document.getElementById("penOpacity");
+const penSmooth = document.getElementById("penSmooth");
+const undoBtn = document.getElementById("undoBtn");
+const redoBtn = document.getElementById("redoBtn");
+const symBtn = document.getElementById("symBtn");
 const clearBtn = document.getElementById("clearBtn");
 const fsDrawBtn = document.getElementById("fsDrawBtn");
 const saveDrawBtn = document.getElementById("saveDrawBtn");
@@ -105,7 +109,6 @@ document.querySelectorAll(".tab").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
     btn.classList.add("active");
-
     const tab = btn.dataset.tab;
     document.querySelectorAll(".panel").forEach(p=>p.classList.add("hidden"));
     document.getElementById(`tab-${tab}`).classList.remove("hidden");
@@ -309,7 +312,6 @@ document.addEventListener("keydown", (e)=>{
   if(e.key === "Escape" && !imgModal.classList.contains("hidden")) closeFullscreen();
 });
 
-// Fullscreen buttons
 saveChatBtn?.addEventListener("click", async ()=>{
   if(!openKey) return;
   await addDoc(collection(db, "saved"), {
@@ -482,104 +484,282 @@ function startChatRealtime(){
   });
 }
 
-// Draw board + fullscreen
+/* ===============================
+   DRAW — Advanced Brush Engine
+   =============================== */
+
 function startDrawingBoard(){
   if(!drawCanvas || !canvasWrap) return;
 
-  const ctx = drawCanvas.getContext("2d");
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+  const ctx = drawCanvas.getContext("2d", { willReadFrequently: true });
 
-  let drawing = false;
-  let mode = "pen"; // pen | eraser
-
-  // white base
-  ctx.fillStyle = "#ffffff";
+  // base white
+  ctx.save();
+  ctx.fillStyle = "#fff";
   ctx.fillRect(0,0,drawCanvas.width, drawCanvas.height);
+  ctx.restore();
 
-  function getPos(e){
-    const rect = drawCanvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return {
-      x: (clientX - rect.left) * (drawCanvas.width / rect.width),
-      y: (clientY - rect.top) * (drawCanvas.height / rect.height)
-    };
+  // undo/redo stacks
+  const UNDO_LIMIT = 30;
+  let undoStack = [];
+  let redoStack = [];
+
+  function snapshot(){
+    try{
+      const img = ctx.getImageData(0,0,drawCanvas.width, drawCanvas.height);
+      undoStack.push(img);
+      if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+      redoStack = [];
+      updateUndoRedoButtons();
+    }catch{
+      // ignore
+    }
   }
 
-  function start(e){
-    drawing = true;
-    const p = getPos(e);
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
+  function restore(img){
+    ctx.putImageData(img,0,0);
   }
 
-  function move(e){
-    if(!drawing) return;
-    const p = getPos(e);
-
-    ctx.strokeStyle = (mode === "eraser") ? "#ffffff" : (penColor?.value || "#ff4fa5");
-    ctx.lineWidth = Number(penSize?.value || 10);
-
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
+  function updateUndoRedoButtons(){
+    if (undoBtn) undoBtn.disabled = undoStack.length === 0;
+    if (redoBtn) redoBtn.disabled = redoStack.length === 0;
   }
 
-  function end(){
-    drawing = false;
-    ctx.closePath();
-  }
+  undoBtn?.addEventListener("click", ()=>{
+    if (!undoStack.length) return;
+    const current = ctx.getImageData(0,0,drawCanvas.width, drawCanvas.height);
+    redoStack.push(current);
+    const prev = undoStack.pop();
+    restore(prev);
+    updateUndoRedoButtons();
+  });
 
-  // mouse
-  drawCanvas.addEventListener("mousedown", (e)=>start(e));
-  drawCanvas.addEventListener("mousemove", (e)=>move(e));
-  window.addEventListener("mouseup", end);
+  redoBtn?.addEventListener("click", ()=>{
+    if (!redoStack.length) return;
+    const current = ctx.getImageData(0,0,drawCanvas.width, drawCanvas.height);
+    undoStack.push(current);
+    const next = redoStack.pop();
+    restore(next);
+    updateUndoRedoButtons();
+  });
 
-  // touch
-  drawCanvas.addEventListener("touchstart", (e)=>{ e.preventDefault(); start(e); }, { passive:false });
-  drawCanvas.addEventListener("touchmove", (e)=>{ e.preventDefault(); move(e); }, { passive:false });
-  drawCanvas.addEventListener("touchend", end);
-
-  penBtn?.addEventListener("click", ()=> mode="pen");
-  eraserBtn?.addEventListener("click", ()=> mode="eraser");
+  let symmetry = false;
+  symBtn?.addEventListener("click", ()=>{
+    symmetry = !symmetry;
+    symBtn.textContent = symmetry ? "🪞 Symmetry: On" : "🪞 Symmetry: Off";
+  });
 
   clearBtn?.addEventListener("click", ()=>{
+    snapshot();
     ctx.clearRect(0,0,drawCanvas.width, drawCanvas.height);
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#fff";
     ctx.fillRect(0,0,drawCanvas.width, drawCanvas.height);
   });
 
-  // ✅ Fullscreen toggle for canvas wrapper
-  function isFullscreen(){
-    return document.fullscreenElement === canvasWrap;
-  }
-
-  async function enterFs(){
-    await canvasWrap.requestFullscreen();
-    if (fsDrawBtn) fsDrawBtn.textContent = "Exit Fullscreen";
-  }
-
-  async function exitFs(){
-    await document.exitFullscreen();
-    if (fsDrawBtn) fsDrawBtn.textContent = "⛶ Fullscreen";
-  }
-
+  // fullscreen
+  function isFullscreen(){ return document.fullscreenElement === canvasWrap; }
   fsDrawBtn?.addEventListener("click", async ()=>{
     try{
-      if(!document.fullscreenEnabled) return alert("Fullscreen not supported on this browser.");
-      if(isFullscreen()) await exitFs();
-      else await enterFs();
+      if(!document.fullscreenEnabled) return alert("Fullscreen not supported here.");
+      if(isFullscreen()) await document.exitFullscreen();
+      else await canvasWrap.requestFullscreen();
     }catch(e){
       alert(e.message);
     }
   });
-
   document.addEventListener("fullscreenchange", ()=>{
     if (!fsDrawBtn) return;
     fsDrawBtn.textContent = isFullscreen() ? "Exit Fullscreen" : "⛶ Fullscreen";
   });
 
-  // save drawing
+  // smoothing (stabilizer): exponentially move toward pointer
+  function smoothPoint(prev, next, smoothAmt){
+    // smoothAmt 0..0.9
+    return {
+      x: prev.x + (next.x - prev.x) * (1 - smoothAmt),
+      y: prev.y + (next.y - prev.y) * (1 - smoothAmt)
+    };
+  }
+
+  function getSettings(){
+    const type = brushType?.value || "pen";
+    const color = penColor?.value || "#ff4fa5";
+    const size = Number(penSize?.value || 12);
+    const opacity = Number(penOpacity?.value || 85) / 100;
+    const smooth = Number(penSmooth?.value || 35) / 100; // 0..0.9-ish
+
+    // base “presets”
+    const presets = {
+      pen:        { mode:"stroke", alpha: opacity, sizeMult: 1.0, shadow:0, comp:"source-over" },
+      pencil:     { mode:"stroke", alpha: opacity*0.45, sizeMult: 0.8, jitter: 0.8, shadow:0, comp:"source-over" },
+      marker:     { mode:"stroke", alpha: opacity*0.75, sizeMult: 1.2, shadow:0, comp:"source-over" },
+      highlighter:{ mode:"stroke", alpha: opacity*0.25, sizeMult: 1.8, shadow:0, comp:"multiply" },
+      spray:      { mode:"spray",  alpha: opacity*0.25, sizeMult: 1.6, density: 18, comp:"source-over" },
+      calligraphy:{ mode:"stamp",  alpha: opacity*0.8,  sizeMult: 1.4, angle: 0, comp:"source-over" },
+      neon:       { mode:"stroke", alpha: opacity*0.65, sizeMult: 1.2, shadow: 18, comp:"source-over" },
+      watercolor: { mode:"stroke", alpha: opacity*0.18, sizeMult: 2.0, shadow: 6, comp:"source-over" },
+      eraser:     { mode:"stroke", alpha: 1.0,          sizeMult: 1.3, shadow:0, comp:"destination-out" }
+    };
+
+    const p = presets[type] || presets.pen;
+    return { type, color, size, opacity, smooth, ...p };
+  }
+
+  // pointer handling
+  let drawing = false;
+  let last = null;
+  let smoothLast = null;
+
+  function canvasPoint(e){
+    const rect = drawCanvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (drawCanvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (drawCanvas.height / rect.height);
+    return { x, y };
+  }
+
+  function drawStrokeSegment(a, b, s, pressure=1){
+    // pressure 0..1
+    const size = (s.size * s.sizeMult) * (0.45 + pressure*0.8);
+
+    ctx.save();
+    ctx.globalCompositeOperation = s.comp;
+    ctx.globalAlpha = s.alpha;
+    ctx.strokeStyle = s.color;
+    ctx.fillStyle = s.color;
+
+    // neon / watercolor glow-ish
+    ctx.shadowBlur = s.shadow || 0;
+    ctx.shadowColor = s.color;
+
+    if (s.mode === "stroke") {
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = size;
+
+      // pencil jitter: draw a couple offset strokes
+      if (s.jitter) {
+        for (let i=0;i<2;i++){
+          const jx = (Math.random()-0.5) * s.jitter * 2;
+          const jy = (Math.random()-0.5) * s.jitter * 2;
+          ctx.beginPath();
+          ctx.moveTo(a.x + jx, a.y + jy);
+          ctx.lineTo(b.x + jx, b.y + jy);
+          ctx.stroke();
+        }
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+
+    if (s.mode === "spray") {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.max(1, Math.hypot(dx,dy));
+      const steps = Math.ceil(dist / 6);
+      const radius = size;
+
+      for (let i=0;i<steps;i++){
+        const t = i/steps;
+        const px = a.x + dx*t;
+        const py = a.y + dy*t;
+
+        for (let d=0; d<(s.density||16); d++){
+          const ang = Math.random()*Math.PI*2;
+          const r = Math.random()*radius;
+          ctx.fillRect(px + Math.cos(ang)*r, py + Math.sin(ang)*r, 1.5, 1.5);
+        }
+      }
+    }
+
+    if (s.mode === "stamp") {
+      // calligraphy stamp: oriented oval following direction
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const ang = Math.atan2(dy, dx);
+
+      const dist = Math.max(1, Math.hypot(dx,dy));
+      const steps = Math.ceil(dist / 3);
+      const w = size * 1.2;
+      const h = size * 0.45;
+
+      for (let i=0;i<steps;i++){
+        const t = i/steps;
+        const px = a.x + dx*t;
+        const py = a.y + dy*t;
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(ang);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, w, h, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function drawSymmetry(a,b,s,pressure){
+    // draw normal
+    drawStrokeSegment(a,b,s,pressure);
+
+    if (!symmetry) return;
+
+    // mirror over vertical center
+    const cx = drawCanvas.width / 2;
+    const ma = { x: cx + (cx - a.x), y: a.y };
+    const mb = { x: cx + (cx - b.x), y: b.y };
+    drawStrokeSegment(ma, mb, s, pressure);
+  }
+
+  function onDown(e){
+    if (e.button !== undefined && e.button !== 0) return; // left click only
+    drawing = true;
+
+    // save undo snapshot at stroke start
+    snapshot();
+
+    last = canvasPoint(e);
+    smoothLast = { ...last };
+
+    drawCanvas.setPointerCapture?.(e.pointerId);
+  }
+
+  function onMove(e){
+    if (!drawing) return;
+    const s = getSettings();
+
+    const raw = canvasPoint(e);
+
+    // smoothing
+    const smoothAmt = Math.min(0.9, Math.max(0, s.smooth));
+    smoothLast = smoothPoint(smoothLast, raw, smoothAmt);
+
+    const pressure = (e.pressure && e.pressure > 0) ? e.pressure : 1;
+
+    drawSymmetry(smoothLast, raw, s, pressure);
+
+    last = raw;
+  }
+
+  function onUp(){
+    drawing = false;
+    last = null;
+    smoothLast = null;
+    updateUndoRedoButtons();
+  }
+
+  // pointer events cover mouse + touch + pen
+  drawCanvas.addEventListener("pointerdown", (e)=>{ e.preventDefault(); onDown(e); });
+  drawCanvas.addEventListener("pointermove", (e)=>{ e.preventDefault(); onMove(e); });
+  window.addEventListener("pointerup", onUp);
+  window.addEventListener("pointercancel", onUp);
+
+  // Save drawing
   saveDrawBtn?.addEventListener("click", async ()=>{
     try{
       saveDrawBtn.disabled = true;
@@ -588,7 +768,6 @@ function startDrawingBoard(){
       if(!blob) throw new Error("Could not save drawing.");
 
       const file = new File([blob], `drawing_${Date.now()}.png`, { type:"image/png" });
-
       const { key } = await uploadImageToR2(file);
 
       await addDoc(collection(db, "drawings"), {
@@ -607,6 +786,8 @@ function startDrawingBoard(){
       saveDrawBtn.disabled = false;
     }
   });
+
+  updateUndoRedoButtons();
 }
 
 function startDrawGallery(){
