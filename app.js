@@ -22,12 +22,12 @@ import {
 
 // ✅ your real config here
 const firebaseConfig = {
-  apiKey: "PASTE",
-  authDomain: "PASTE",
-  projectId: "PASTE",
-  storageBucket: "PASTE",
-  messagingSenderId: "PASTE",
-  appId: "PASTE",
+  apiKey: "AIzaSyCCJdRcwZD9l83A02h1ysPI_VWTc1IGRSM",
+  authDomain: "love-hub-d4f77.firebaseapp.com",
+  projectId: "love-hub-d4f77",
+  storageBucket: "love-hub-d4f77.firebasestorage.app",
+  messagingSenderId: "189429669803",
+  appId: "1:189429669803:web:e2e6cb2488d234e1fafcee"
 };
 
 const app = initializeApp(firebaseConfig);
