@@ -85,48 +85,85 @@
       <h3>Draw 🎨</h3>
 
       <div class="drawBar">
-        <div class="drawGroup">
-          <label class="muted tiny">Brush</label>
-          <select id="brushType" class="select">
-            <option value="pen">Pen</option>
-            <option value="pencil">Pencil</option>
-            <option value="marker">Marker</option>
-            <option value="highlighter">Highlighter</option>
-            <option value="spray">Spray</option>
-            <option value="calligraphy">Calligraphy</option>
-            <option value="neon">Neon</option>
-            <option value="watercolor">Watercolor-ish</option>
-            <option value="eraser">Eraser</option>
-          </select>
+        <div class="drawRow">
+          <div class="drawGroup">
+            <label class="muted tiny">Tool</label>
+            <select id="toolMode" class="select">
+              <option value="brush">Brush</option>
+              <option value="bucket">Fill Bucket 🪣</option>
+              <option value="text">Text 🔤</option>
+            </select>
+          </div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Brush</label>
+            <select id="brushType" class="select">
+              <option value="pen">Pen</option>
+              <option value="pencil">Pencil</option>
+              <option value="marker">Marker</option>
+              <option value="highlighter">Highlighter</option>
+              <option value="spray">Spray</option>
+              <option value="calligraphy">Calligraphy</option>
+              <option value="neon">Neon</option>
+              <option value="watercolor">Watercolor-ish</option>
+              <option value="eraser">Eraser</option>
+            </select>
+          </div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Color</label>
+            <input id="penColor" type="color" value="#ff4fa5"/>
+          </div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Size</label>
+            <input id="penSize" type="range" min="1" max="80" value="12"/>
+          </div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Opacity</label>
+            <input id="penOpacity" type="range" min="5" max="100" value="85"/>
+          </div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Smoothing</label>
+            <input id="penSmooth" type="range" min="0" max="90" value="35"/>
+          </div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Fill Tolerance</label>
+            <input id="fillTol" type="range" min="0" max="80" value="24"/>
+          </div>
         </div>
 
-        <div class="drawGroup">
-          <label class="muted tiny">Color</label>
-          <input id="penColor" type="color" value="#ff4fa5"/>
-        </div>
+        <div class="drawRow">
+          <div class="drawTextBox" id="textControls">
+            <label class="muted tiny">Text</label>
+            <input id="textValue" class="input small" placeholder="Type text…"/>
 
-        <div class="drawGroup">
-          <label class="muted tiny">Size</label>
-          <input id="penSize" type="range" min="1" max="80" value="12"/>
-        </div>
+            <label class="muted tiny">Font</label>
+            <select id="textFont" class="select">
+              <option value="system">System</option>
+              <option value="serif">Serif</option>
+              <option value="mono">Mono</option>
+              <option value="cursive">Cursive</option>
+            </select>
 
-        <div class="drawGroup">
-          <label class="muted tiny">Opacity</label>
-          <input id="penOpacity" type="range" min="5" max="100" value="85"/>
-        </div>
+            <label class="muted tiny">Size</label>
+            <input id="textSize" type="range" min="10" max="120" value="44"/>
 
-        <div class="drawGroup">
-          <label class="muted tiny">Smoothing</label>
-          <input id="penSmooth" type="range" min="0" max="90" value="35"/>
-        </div>
+            <button id="textBold" class="btn">B</button>
+            <div class="muted tiny tip">Tap canvas to place text.</div>
+          </div>
 
-        <div class="drawBtns">
-          <button id="undoBtn" class="btn">↩ Undo</button>
-          <button id="redoBtn" class="btn">↪ Redo</button>
-          <button id="symBtn" class="btn">🪞 Symmetry: Off</button>
-          <button id="clearBtn" class="btn">Clear</button>
-          <button id="fsDrawBtn" class="btn">⛶ Fullscreen</button>
-          <button id="saveDrawBtn" class="btn primary">Save Drawing 💾</button>
+          <div class="drawBtns">
+            <button id="undoBtn" class="btn">↩ Undo</button>
+            <button id="redoBtn" class="btn">↪ Redo</button>
+            <button id="symBtn" class="btn">🪞 Symmetry: Off</button>
+            <button id="clearBtn" class="btn">Clear</button>
+            <button id="fsDrawBtn" class="btn">⛶ Fullscreen</button>
+            <button id="saveDrawBtn" class="btn primary">Save Drawing 💾</button>
+          </div>
         </div>
       </div>
 
@@ -134,7 +171,9 @@
         <canvas id="drawCanvas" width="1200" height="700"></canvas>
       </div>
 
-      <p class="muted tiny">Tip: Pencil/Watercolor looks best with lower opacity 💗</p>
+      <p class="muted tiny">
+        Tool tips: Bucket fills an area based on tolerance. Text: type then tap canvas. 💗
+      </p>
 
       <h4 class="mt">Gallery 💗</h4>
       <div id="drawGallery" class="savedGrid"></div>
