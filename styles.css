@@ -74,6 +74,12 @@ body{
   background: rgba(255,255,255,.32);
   outline:none;
 }
+.input.small{
+  min-width:180px;
+  padding:10px 12px;
+  border-radius:14px;
+}
+
 .btn{
   padding:12px 14px;
   border-radius:16px;
@@ -87,6 +93,8 @@ body{
   color:white;
   border:none;
 }
+.btn[disabled]{opacity:.55; cursor:not-allowed}
+
 .msg{margin-top:10px; font-size:13px}
 .heartbox{
   margin-top:12px;
@@ -232,23 +240,11 @@ body{
 }
 
 /* Draw */
-.drawBar{
-  display:grid;
-  gap:10px;
-  margin-bottom:10px;
-}
-.drawGroup{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-}
-.drawBtns{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-}
+.drawBar{display:grid; gap:10px; margin-bottom:10px}
+.drawRow{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
+.drawGroup{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.drawBtns{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+
 .select{
   padding:10px 12px;
   border-radius:14px;
@@ -256,6 +252,18 @@ body{
   background: rgba(255,255,255,.32);
   font-weight:800;
 }
+
+.drawTextBox{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  padding:10px;
+  border-radius:16px;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.22);
+}
+.tip{opacity:.8}
 
 .canvasWrap{
   border-radius:18px;
@@ -268,7 +276,7 @@ body{
   height:auto;
   display:block;
   background:#fff;
-  touch-action:none; /* mobile */
+  touch-action:none;
 }
 .mt{margin-top:16px}
 
