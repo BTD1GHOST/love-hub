@@ -22,7 +22,8 @@ import {
   onSnapshot,
   orderBy,
   limit,
-  serverTimestamp
+  serverTimestamp,
+  Timestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -41,7 +42,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// UI refs
+/* ===============================
+   Tiny safety: don’t “die silently”
+   =============================== */
+window.addEventListener("error", (e) => console.error("JS error:", e));
+window.addEventListener("unhandledrejection", (e) => console.error("Promise rejection:", e));
+
+/* ===============================
+   UI refs
+   =============================== */
 const authView = document.getElementById("authView");
 const pendingView = document.getElementById("pendingView");
 const appView = document.getElementById("appView");
@@ -106,7 +115,18 @@ const textFont = document.getElementById("textFont");
 const textSize = document.getElementById("textSize");
 const textBold = document.getElementById("textBold");
 
-// helpers
+// Calendar UI
+const calTitle = document.getElementById("calTitle");
+const calWhen = document.getElementById("calWhen");
+const calEnd = document.getElementById("calEnd");
+const calNotes = document.getElementById("calNotes");
+const calAddBtn = document.getElementById("calAddBtn");
+const calList = document.getElementById("calList");
+const calMsg = document.getElementById("calMsg");
+
+/* ===============================
+   helpers
+   =============================== */
 function show(view) {
   authView?.classList.add("hidden");
   pendingView?.classList.add("hidden");
@@ -114,11 +134,13 @@ function show(view) {
   btnSignOut?.classList.add("hidden");
   view?.classList.remove("hidden");
 }
+
 function setMsg(el, text, ok = false) {
   if (!el) return;
   el.textContent = text || "";
   el.style.color = ok ? "#1f7a44" : "#8a1b3d";
 }
+
 function esc(s = "") {
   return String(s).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;",
@@ -129,7 +151,32 @@ function esc(s = "") {
   }[c]));
 }
 
-// Tabs
+function fmtDateTimeLocal(d) {
+  try {
+    return d.toLocaleString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  } catch {
+    return String(d);
+  }
+}
+
+function parseDTLocal(input) {
+  // input like "2026-02-07T21:30"
+  if (!input) return null;
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+
+/* ===============================
+   Tabs
+   =============================== */
 document.querySelectorAll(".tab").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
@@ -145,7 +192,6 @@ document.querySelectorAll(".tab").forEach((btn) => {
    =============================== */
 const LOVE_START = new Date("2024-06-18T00:00:00-04:00"); // start in EST/EDT-safe offset
 
-const loveNamesEl = document.getElementById("loveNames");
 const loveStartPrettyEl = document.getElementById("loveStartPretty");
 const loveYmdEl = document.getElementById("loveYMD");
 const loveMonthsEl = document.getElementById("loveMonths");
@@ -267,7 +313,9 @@ loadLoveBg();
 updateLovePanel();
 setInterval(updateLovePanel, 10_000);
 
-// Auth
+/* ===============================
+   Auth (Sign up / Sign in)
+   =============================== */
 btnSignUp && (btnSignUp.onclick = async () => {
   setMsg(authMsg, "");
   try {
@@ -301,7 +349,9 @@ btnSignIn && (btnSignIn.onclick = async () => {
 
 btnSignOut?.addEventListener("click", () => signOut(auth));
 
-// ===== Nickname map (for chat labels) =====
+/* ===============================
+   Nickname map (for chat labels)
+   =============================== */
 let uidToName = {};
 let usersUnsub = null;
 
@@ -316,11 +366,14 @@ function startUsersRealtime() {
     uidToName = map;
   });
 }
+
 function displayNameFor(uid, fallbackEmail = "") {
   return uidToName[uid] || fallbackEmail || uid || "Someone";
 }
 
-// ===== Admin approvals (pending list) =====
+/* ===============================
+   Admin approvals (pending list)
+   =============================== */
 async function loadPendingUsers() {
   if (!pendingList) return;
   pendingList.innerHTML = "";
@@ -395,7 +448,9 @@ async function loadPendingUsers() {
 }
 btnRefreshUsers?.addEventListener("click", loadPendingUsers);
 
-// ===== Admin: All accounts list =====
+/* ===============================
+   Admin: All accounts list
+   =============================== */
 let accountsUnsub = null;
 
 function startAccountsRealtime(isAdmin) {
@@ -454,9 +509,7 @@ function startAccountsRealtime(isAdmin) {
       deleteBtn.className = "btn primary";
       deleteBtn.textContent = "Delete Access";
       deleteBtn.onclick = async () => {
-        if (!confirm("This will block them and remove their profile doc. Continue?")) return;
-
-        try { await updateDoc(doc(db, "users", uid), { denied: true, approved: false }); } catch { }
+        if (!confirm("This will remove their account doc. Continue?")) return;
         await deleteDoc(doc(db, "users", uid));
       };
 
@@ -476,7 +529,9 @@ function startAccountsRealtime(isAdmin) {
   });
 }
 
-// ===== Admin: Clear chat =====
+/* ===============================
+   Admin: Clear chat
+   =============================== */
 async function clearChat(isAdmin) {
   if (!isAdmin) return;
   if (!confirm("Clear ALL chat messages for everyone?")) return;
@@ -504,7 +559,9 @@ btnClearChat?.addEventListener("click", async () => {
   await clearChat(!!window.__isAdmin);
 });
 
-// ===== Upload to R2 =====
+/* ===============================
+   Upload to R2 (Worker)
+   =============================== */
 async function uploadImageToR2(file) {
   const token = await auth.currentUser.getIdToken();
   const res = await fetch(`${WORKER_URL}/upload`, {
@@ -521,7 +578,6 @@ async function uploadImageToR2(file) {
   return await res.json(); // { key }
 }
 
-// ===== Fetch blob =====
 async function fetchImageBlob(key) {
   const token = await auth.currentUser.getIdToken();
   const res = await fetch(`${WORKER_URL}/media/${encodeURIComponent(key)}`, {
@@ -531,7 +587,6 @@ async function fetchImageBlob(key) {
   return await res.blob();
 }
 
-// ===== Download =====
 async function downloadBlob(blob, filename) {
   const a = document.createElement("a");
   const url = URL.createObjectURL(blob);
@@ -543,7 +598,9 @@ async function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1200);
 }
 
-// ===== Fullscreen viewer state =====
+/* ===============================
+   Fullscreen viewer
+   =============================== */
 let openKey = null;
 let openFilename = null;
 let openContentType = null;
@@ -605,7 +662,9 @@ saveDeviceBtn?.addEventListener("click", async () => {
   }
 });
 
-// ===== Saved tab: select + unsave =====
+/* ===============================
+   Saved tab: select + unsave
+   =============================== */
 let savedSelectMode = false;
 let selectedSavedIds = new Set();
 let lastSavedDocs = [];
@@ -741,8 +800,15 @@ function startSavedRealtime() {
   updateSavedToolbar();
 }
 
-// ===== Chat realtime (tap anywhere opens pic) =====
+/* ===============================
+   Chat realtime (tap anywhere opens pic)
+   =============================== */
+let chatStarted = false;
+
 function startChatRealtime() {
+  if (chatStarted) return;
+  chatStarted = true;
+
   if (!chatBox) return;
 
   sendBtn?.addEventListener("click", async () => {
@@ -826,14 +892,14 @@ function startChatRealtime() {
             body.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
             div.style.cursor = "default";
           }
-        });
+        }).catch(() => { });
 
         // CLICK ANYWHERE on the message bubble
         div.addEventListener("click", async () => {
-          const vs = await getDoc(viewDocRef);
-          if (vs.exists()) return;
-
           try {
+            const vs = await getDoc(viewDocRef);
+            if (vs.exists()) return;
+
             const blob = await fetchImageBlob(m.key);
             openFullscreenWithBlob(blob, { key: m.key, filename: m.filename, contentType: m.contentType });
 
@@ -862,7 +928,12 @@ function startChatRealtime() {
 /* ===============================
    DRAW — Advanced + Bucket + Text
    =============================== */
+let drawStarted = false;
+
 function startDrawingBoard() {
+  if (drawStarted) return;
+  drawStarted = true;
+
   if (!drawCanvas || !canvasWrap) return;
 
   const ctx = drawCanvas.getContext("2d", { willReadFrequently: true });
@@ -1139,41 +1210,6 @@ function startDrawingBoard() {
     }
 
     ctx.putImageData(img, 0, 0);
-
-    if (symmetry) {
-      const mx = (w / 2) + ((w / 2) - sx);
-      const my = sy;
-
-      const img2 = ctx.getImageData(0, 0, w, h);
-      const data2 = img2.data;
-      const msx = Math.max(0, Math.min(w - 1, Math.floor(mx)));
-      const msy = Math.max(0, Math.min(h - 1, Math.floor(my)));
-      const mStartIdx = (msy * w + msx) * 4;
-      const mStartCol = colorAt(data2, mStartIdx);
-
-      const visited2 = new Uint8Array(w * h);
-      const stack2 = [[msx, msy]];
-
-      while (stack2.length) {
-        const [cx, cy] = stack2.pop();
-        const pos = cy * w + cx;
-        if (visited2[pos]) continue;
-        visited2[pos] = 1;
-
-        const idx = pos * 4;
-        const cur = colorAt(data2, idx);
-        if (distColor(cur, mStartCol) > tol) continue;
-
-        setColor(data2, idx, target);
-
-        if (cx > 0) stack2.push([cx - 1, cy]);
-        if (cx < w - 1) stack2.push([cx + 1, cy]);
-        if (cy > 0) stack2.push([cx, cy - 1]);
-        if (cy < h - 1) stack2.push([cx, cy + 1]);
-      }
-
-      ctx.putImageData(img2, 0, 0);
-    }
   }
 
   // TEXT TOOL
@@ -1204,12 +1240,6 @@ function startDrawingBoard() {
     ctx.shadowBlur = 2;
     ctx.shadowColor = "rgba(0,0,0,.15)";
     ctx.fillText(txt, x, y);
-
-    if (symmetry) {
-      const cx = drawCanvas.width / 2;
-      const mx = cx + (cx - x);
-      ctx.fillText(txt, mx, y);
-    }
     ctx.restore();
   }
 
@@ -1335,7 +1365,150 @@ saveDrawBtn?.addEventListener("click", async () => {
   }
 });
 
-// Auth gate
+/* ===============================
+   CALENDAR — working events
+   =============================== */
+let calUnsub = null;
+let calStarted = false;
+
+function startCalendarRealtime(isAdmin) {
+  if (calStarted) return;
+  calStarted = true;
+
+  if (!calList) return;
+
+  // default: set “when” to next 30 minutes
+  try {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + (30 - (now.getMinutes() % 30)));
+    now.setSeconds(0, 0);
+    if (calWhen && !calWhen.value) calWhen.value = now.toISOString().slice(0, 16);
+  } catch { }
+
+  calAddBtn?.addEventListener("click", async () => {
+    setMsg(calMsg, "");
+    try {
+      const title = (calTitle?.value || "").trim();
+      const when = parseDTLocal(calWhen?.value);
+      const end = parseDTLocal(calEnd?.value);
+      const notes = (calNotes?.value || "").trim();
+
+      if (!title) return setMsg(calMsg, "Add a title 🙂");
+      if (!when) return setMsg(calMsg, "Pick a start date/time 🙂");
+      if (end && end <= when) return setMsg(calMsg, "End time must be after start time 🙂");
+
+      const docData = {
+        title,
+        notes,
+        startAt: Timestamp.fromDate(when),
+        endAt: end ? Timestamp.fromDate(end) : null,
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser.uid,
+        createdByEmail: auth.currentUser.email || ""
+      };
+
+      await addDoc(collection(db, "events"), docData);
+
+      if (calTitle) calTitle.value = "";
+      if (calNotes) calNotes.value = "";
+      if (calEnd) calEnd.value = "";
+
+      setMsg(calMsg, "Event added 💗", true);
+      setTimeout(() => setMsg(calMsg, ""), 1200);
+    } catch (e) {
+      setMsg(calMsg, e.message);
+    }
+  });
+
+  // realtime list
+  if (calUnsub) calUnsub();
+  const qEvents = query(collection(db, "events"), orderBy("startAt"), limit(200));
+
+  calUnsub = onSnapshot(qEvents, (snap) => {
+    calList.innerHTML = "";
+
+    if (snap.empty) {
+      calList.innerHTML = `<div class="muted">No events yet. Add one 💗</div>`;
+      return;
+    }
+
+    // group by date
+    let lastKey = "";
+    snap.forEach((d) => {
+      const ev = d.data();
+      const start = ev.startAt?.toDate ? ev.startAt.toDate() : null;
+      const end = ev.endAt?.toDate ? ev.endAt.toDate() : null;
+
+      const dateKey = start
+        ? start.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+        : "Unknown date";
+
+      if (dateKey !== lastKey) {
+        lastKey = dateKey;
+        const h = document.createElement("div");
+        h.className = "calDayHeader";
+        h.textContent = dateKey;
+        calList.appendChild(h);
+      }
+
+      const card = document.createElement("div");
+      card.className = "calCard";
+
+      const timeLine = document.createElement("div");
+      timeLine.className = "calTime";
+
+      if (start && end) timeLine.textContent = `${fmtDateTimeLocal(start)} → ${fmtDateTimeLocal(end)}`;
+      else if (start) timeLine.textContent = fmtDateTimeLocal(start);
+      else timeLine.textContent = "—";
+
+      const titleLine = document.createElement("div");
+      titleLine.className = "calTitle";
+      titleLine.textContent = ev.title || "Event";
+
+      const noteLine = document.createElement("div");
+      noteLine.className = "calNotes";
+      noteLine.textContent = ev.notes ? ev.notes : "";
+
+      const foot = document.createElement("div");
+      foot.className = "calFoot";
+
+      const who = document.createElement("div");
+      who.className = "muted tiny";
+      who.textContent = `by ${displayNameFor(ev.createdBy, ev.createdByEmail)}`;
+
+      const canDelete = isAdmin || ev.createdBy === auth.currentUser.uid;
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn";
+      delBtn.textContent = "Delete";
+      delBtn.disabled = !canDelete;
+      delBtn.title = canDelete ? "" : "Only admin or creator can delete";
+      delBtn.addEventListener("click", async () => {
+        if (!canDelete) return;
+        if (!confirm("Delete this event?")) return;
+        try {
+          await deleteDoc(doc(db, "events", d.id));
+        } catch (e) {
+          alert(e.message);
+        }
+      });
+
+      foot.appendChild(who);
+      foot.appendChild(delBtn);
+
+      card.appendChild(timeLine);
+      card.appendChild(titleLine);
+      if (ev.notes) card.appendChild(noteLine);
+      card.appendChild(foot);
+
+      calList.appendChild(card);
+    });
+  });
+}
+
+/* ===============================
+   Auth gate
+   =============================== */
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     show(authView);
@@ -1345,7 +1518,16 @@ onAuthStateChanged(auth, async (user) => {
   btnSignOut?.classList.remove("hidden");
 
   const userRef = doc(db, "users", user.uid);
-  const snap = await getDoc(userRef);
+
+  let snap;
+  try {
+    snap = await getDoc(userRef);
+  } catch (e) {
+    // if rules block reading own doc, you’ll see it here (and page won’t “freeze”)
+    setMsg(authMsg, e.message);
+    show(authView);
+    return;
+  }
 
   if (!snap.exists()) {
     await setDoc(userRef, {
@@ -1377,13 +1559,11 @@ onAuthStateChanged(auth, async (user) => {
   if (isAdmin) adminTabBtn?.classList.remove("hidden");
   else adminTabBtn?.classList.add("hidden");
 
-  // optional: set header names if you ever want
-  // loveNamesEl && (loveNamesEl.textContent = "Bray & Ali");
-
   startChatRealtime();
   startSavedRealtime();
   startDrawingBoard();
   startDrawGallery();
+  startCalendarRealtime(isAdmin);
 
   if (isAdmin) {
     loadPendingUsers();
