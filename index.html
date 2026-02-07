@@ -56,23 +56,28 @@
       <button class="tab adminOnly hidden" data-tab="admin">🛡️ Admin</button>
     </nav>
 
+    <!-- CHAT -->
     <section class="panel" id="tab-chat">
-  <h3>Chat 💬</h3>
+      <h3>Chat 💬</h3>
 
-  <div id="chatBox" class="chatBox"></div>
+      <div id="chatBox" class="chatBox"></div>
 
-  <div class="chatInput">
-    <input id="chatText" class="input" placeholder="Type something cute… 💗" />
-    <button id="sendBtn" class="btn primary">Send</button>
-  </div>
-</section>
+      <div class="chatInput">
+        <input id="chatText" class="input" placeholder="Type something cute… 💗" />
+        <button id="sendBtn" class="btn primary">Send</button>
 
-
-    <section class="panel hidden" id="tab-draw">
-      <h3>Draw 🎨</h3>
-      <p class="muted">Later we’ll add drawing + save.</p>
+        <input id="imgPick" type="file" accept="image/*" class="filePick" />
+        <button id="sendImgBtn" class="btn">Send Pic 📸</button>
+      </div>
     </section>
 
+    <!-- DRAW (later) -->
+    <section class="panel hidden" id="tab-draw">
+      <h3>Draw 🎨</h3>
+      <p class="muted">Next we’ll build the canvas + save drawings to R2.</p>
+    </section>
+
+    <!-- LOVE -->
     <section class="panel hidden" id="tab-love">
       <h3>Love 💞</h3>
       <div class="loveCard">
@@ -81,11 +86,13 @@
       </div>
     </section>
 
+    <!-- CALENDAR (later) -->
     <section class="panel hidden" id="tab-calendar">
       <h3>Calendar 📅</h3>
-      <p class="muted">Later we’ll add shared events (EST).</p>
+      <p class="muted">Next we’ll add events (EST) that you both can see.</p>
     </section>
 
+    <!-- ADMIN -->
     <section class="panel hidden" id="tab-admin">
       <h3>Admin 🛡️</h3>
       <p class="muted">Approve/deny accounts here.</p>
@@ -97,6 +104,14 @@
       </div>
     </section>
   </main>
+
+  <!-- IMAGE MODAL -->
+  <div id="imgModal" class="modal hidden">
+    <div class="modalInner">
+      <img id="modalImg" class="modalImg" />
+      <button id="closeModal" class="btn primary">Close</button>
+    </div>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>
