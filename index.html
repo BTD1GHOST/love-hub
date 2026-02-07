@@ -75,8 +75,19 @@
 
     <!-- SAVED -->
     <section class="panel hidden" id="tab-saved">
-      <h3>Saved 💾</h3>
-      <p class="muted">Pics you saved in chat show up here for both of you.</p>
+      <div class="panelTop">
+        <div>
+          <h3>Saved 💾</h3>
+          <p class="muted">Pics you saved in chat show up here for both of you.</p>
+        </div>
+
+        <div class="panelActions">
+          <button id="savedSelectBtn" class="btn">Select</button>
+          <button id="savedSelectAllBtn" class="btn hidden">Select All</button>
+          <button id="savedUnsaveBtn" class="btn primary hidden" disabled>Unsave</button>
+        </div>
+      </div>
+
       <div id="savedGrid" class="savedGrid"></div>
     </section>
 
@@ -197,12 +208,21 @@
     <!-- ADMIN -->
     <section class="panel hidden" id="tab-admin">
       <h3>Admin 🛡️</h3>
-      <p class="muted">Approve/deny accounts here.</p>
+      <p class="muted">Approve/deny accounts + manage users.</p>
 
       <div class="adminBox">
-        <button id="btnRefreshUsers" class="btn">Refresh list</button>
+        <div class="adminActions">
+          <button id="btnRefreshUsers" class="btn">Refresh pending</button>
+          <button id="btnClearChat" class="btn primary">Clear Chat 🧹</button>
+        </div>
+
         <div id="adminMsg" class="msg"></div>
+
+        <h4 class="mt">Pending approvals</h4>
         <div id="pendingList" class="list"></div>
+
+        <h4 class="mt">All accounts</h4>
+        <div id="accountsList" class="list"></div>
       </div>
     </section>
   </main>
