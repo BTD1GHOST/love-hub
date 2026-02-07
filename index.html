@@ -71,7 +71,7 @@
         <button id="sendImgBtn" class="btn">Send Pic 📸</button>
       </div>
 
-      <p class="muted tiny">Tap a pic message to open it.</p>
+      <p class="muted tiny">Tap a pic message to open it fullscreen.</p>
     </section>
 
     <!-- SAVED -->
@@ -81,10 +81,30 @@
       <div id="savedGrid" class="savedGrid"></div>
     </section>
 
-    <!-- DRAW (later) -->
+    <!-- DRAW -->
     <section class="panel hidden" id="tab-draw">
       <h3>Draw 🎨</h3>
-      <p class="muted">Next we’ll build the canvas + save drawings to R2.</p>
+
+      <div class="drawBar">
+        <label class="muted tiny">Color</label>
+        <input id="penColor" type="color" value="#ff4fa5"/>
+
+        <label class="muted tiny">Size</label>
+        <input id="penSize" type="range" min="2" max="40" value="10"/>
+
+        <button id="penBtn" class="btn primary">Pen</button>
+        <button id="eraserBtn" class="btn">Eraser</button>
+        <button id="clearBtn" class="btn">Clear</button>
+
+        <button id="saveDrawBtn" class="btn primary">Save Drawing 💾</button>
+      </div>
+
+      <div class="canvasWrap">
+        <canvas id="drawCanvas" width="900" height="520"></canvas>
+      </div>
+
+      <h4 class="mt">Gallery 💗</h4>
+      <div id="drawGallery" class="savedGrid"></div>
     </section>
 
     <!-- LOVE -->
@@ -96,7 +116,7 @@
       </div>
     </section>
 
-    <!-- CALENDAR (later) -->
+    <!-- CALENDAR -->
     <section class="panel hidden" id="tab-calendar">
       <h3>Calendar 📅</h3>
       <p class="muted">Next we’ll add events (EST) that you both can see.</p>
