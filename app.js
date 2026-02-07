@@ -70,6 +70,15 @@ const imgModal = document.getElementById("imgModal");
 const modalImg = document.getElementById("modalImg");
 const closeModal = document.getElementById("closeModal");
 
+// Context menu UI
+const ctxMenu = document.getElementById("ctxMenu");
+const ctxSaveChat = document.getElementById("ctxSaveChat");
+const ctxSaveDevice = document.getElementById("ctxSaveDevice");
+const ctxCancel = document.getElementById("ctxCancel");
+
+// Saved tab UI
+const savedGrid = document.getElementById("savedGrid");
+
 // ---------- helpers ----------
 function show(view){
   authView.classList.add("hidden");
@@ -235,9 +244,15 @@ async function uploadImageToR2(file) {
 
 // ---------- Modal helpers ----------
 let currentBlobUrl = null;
+let currentOpenKey = null;
+let currentOpenFilename = null;
+let currentOpenContentType = null;
 
-function openModalWithBlobUrl(url) {
+function openModalWithBlobUrl(url, meta) {
   currentBlobUrl = url;
+  currentOpenKey = meta?.key || null;
+  currentOpenFilename = meta?.filename || "image.jpg";
+  currentOpenContentType = meta?.contentType || "image/*";
   modalImg.src = url;
   imgModal.classList.remove("hidden");
 }
@@ -247,6 +262,10 @@ function closeModalNow() {
   modalImg.src = "";
   if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
   currentBlobUrl = null;
+  currentOpenKey = null;
+  currentOpenFilename = null;
+  currentOpenContentType = null;
+  hideCtx();
 }
 
 closeModal?.addEventListener("click", closeModalNow);
@@ -261,10 +280,174 @@ async function fetchImageBlobUrl(key) {
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-  return URL.createObjectURL(blob);
+  return { blob, url: URL.createObjectURL(blob) };
 }
 
-// ---------- Chat (text + images) ----------
+async function downloadBlobToDevice(blob, filename) {
+  const a = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  a.href = url;
+  a.download = filename || "image.jpg";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+// ---------- Context menu (hold/right-click) ----------
+let ctxTarget = null; // { key, filename, contentType, messageId }
+
+function showCtx(x, y, target){
+  ctxTarget = target;
+  ctxMenu.style.left = `${x}px`;
+  ctxMenu.style.top = `${y}px`;
+  ctxMenu.classList.remove("hidden");
+
+  // keep within viewport
+  const rect = ctxMenu.getBoundingClientRect();
+  const pad = 10;
+  if(rect.right > window.innerWidth - pad){
+    ctxMenu.style.left = `${window.innerWidth - rect.width - pad}px`;
+  }
+  if(rect.bottom > window.innerHeight - pad){
+    ctxMenu.style.top = `${window.innerHeight - rect.height - pad}px`;
+  }
+}
+function hideCtx(){
+  ctxMenu.classList.add("hidden");
+  ctxTarget = null;
+}
+
+ctxCancel?.addEventListener("click", hideCtx);
+document.addEventListener("click", (e)=>{
+  if(!ctxMenu.classList.contains("hidden") && !ctxMenu.contains(e.target)){
+    hideCtx();
+  }
+});
+
+// Save in chat: create doc in /saved
+ctxSaveChat?.addEventListener("click", async ()=>{
+  if(!ctxTarget) return;
+  hideCtx();
+  await addDoc(collection(db, "saved"), {
+    key: ctxTarget.key,
+    filename: ctxTarget.filename || "image.jpg",
+    contentType: ctxTarget.contentType || "image/*",
+    fromMessageId: ctxTarget.messageId || "",
+    savedBy: auth.currentUser.uid,
+    savedAt: serverTimestamp()
+  });
+});
+
+// Save to device: download the actual bytes
+ctxSaveDevice?.addEventListener("click", async ()=>{
+  if(!ctxTarget) return;
+  hideCtx();
+  try{
+    const { blob } = await fetchImageBlobUrl(ctxTarget.key);
+    await downloadBlobToDevice(blob, ctxTarget.filename || "image.jpg");
+  }catch(e){
+    alert(e.message);
+  }
+});
+
+// Long-press helper (mobile)
+function attachLongPress(el, getTarget){
+  let t = null;
+  const start = (ev) => {
+    clearTimeout(t);
+    const pt = (ev.touches && ev.touches[0]) ? ev.touches[0] : ev;
+    t = setTimeout(()=>{
+      const target = getTarget();
+      showCtx(pt.clientX, pt.clientY, target);
+    }, 450);
+  };
+  const cancel = () => clearTimeout(t);
+
+  el.addEventListener("touchstart", start, { passive:true });
+  el.addEventListener("touchend", cancel);
+  el.addEventListener("touchmove", cancel);
+  el.addEventListener("touchcancel", cancel);
+}
+
+// Desktop right-click
+function attachRightClick(el, getTarget){
+  el.addEventListener("contextmenu", (e)=>{
+    e.preventDefault();
+    showCtx(e.clientX, e.clientY, getTarget());
+  });
+}
+
+// Also allow menu on the big modal image
+attachLongPress(modalImg, ()=>({
+  key: currentOpenKey,
+  filename: currentOpenFilename,
+  contentType: currentOpenContentType,
+  messageId: ""
+}));
+attachRightClick(modalImg, ()=>({
+  key: currentOpenKey,
+  filename: currentOpenFilename,
+  contentType: currentOpenContentType,
+  messageId: ""
+}));
+
+// ---------- Saved tab realtime ----------
+function startSavedRealtime(){
+  if(!savedGrid) return;
+
+  const qSaved = query(collection(db, "saved"), orderBy("savedAt"), limit(200));
+
+  onSnapshot(qSaved, async (snap) => {
+    savedGrid.innerHTML = "";
+
+    snap.forEach((d)=>{
+      const s = d.data();
+
+      const card = document.createElement("div");
+      card.className = "savedCard";
+
+      const img = document.createElement("img");
+      img.className = "savedThumb";
+      img.alt = "saved";
+
+      // Load thumbnail on demand (click to view)
+      img.addEventListener("click", async ()=>{
+        try{
+          const { url } = await fetchImageBlobUrl(s.key);
+          openModalWithBlobUrl(url, {
+            key: s.key,
+            filename: s.filename,
+            contentType: s.contentType
+          });
+        }catch(e){
+          alert(e.message);
+        }
+      });
+
+      // show filename
+      const meta = document.createElement("div");
+      meta.className = "muted tiny";
+      meta.textContent = s.filename || "image";
+
+      // lazy load a thumb (fetch + set src)
+      (async ()=>{
+        try{
+          const { url } = await fetchImageBlobUrl(s.key);
+          img.src = url;
+        }catch{
+          img.src = "";
+        }
+      })();
+
+      card.appendChild(img);
+      card.appendChild(meta);
+      savedGrid.appendChild(card);
+    });
+  });
+}
+
+// ---------- Chat (text + snap images) ----------
 function startChatRealtime(){
   if(!chatBox) return;
 
@@ -319,9 +502,9 @@ function startChatRealtime(){
   });
 
   // realtime feed
-  const q = query(collection(db, "messages"), orderBy("createdAt"), limit(200));
+  const qMsg = query(collection(db, "messages"), orderBy("createdAt"), limit(200));
 
-  onSnapshot(q, (snap) => {
+  onSnapshot(qMsg, (snap) => {
     chatBox.innerHTML = "";
 
     snap.forEach((d) => {
@@ -346,13 +529,28 @@ function startChatRealtime(){
           }
         });
 
+        // Attach save menu (works even if opened)
+        attachLongPress(div, ()=>({
+          key: m.key,
+          filename: m.filename || "image.jpg",
+          contentType: m.contentType || "image/*",
+          messageId: d.id
+        }));
+        attachRightClick(div, ()=>({
+          key: m.key,
+          filename: m.filename || "image.jpg",
+          contentType: m.contentType || "image/*",
+          messageId: d.id
+        }));
+
+        // Tap-to-view once (viewer)
         div.addEventListener("click", async () => {
           const vs = await getDoc(viewDocRef);
           if (vs.exists()) return;
 
           try {
-            const blobUrl = await fetchImageBlobUrl(m.key);
-            openModalWithBlobUrl(blobUrl);
+            const { url } = await fetchImageBlobUrl(m.key);
+            openModalWithBlobUrl(url, { key: m.key, filename: m.filename, contentType: m.contentType });
 
             await setDoc(viewDocRef, { openedAt: serverTimestamp() });
 
@@ -421,6 +619,7 @@ onAuthStateChanged(auth, async (user)=>{
     adminTabBtn?.classList.add("hidden");
   }
 
-  // start realtime chat once approved
+  // start realtime
   startChatRealtime();
+  startSavedRealtime();
 });
