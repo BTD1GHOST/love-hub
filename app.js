@@ -24,7 +24,6 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// --- Firebase config (yours) ---
 const firebaseConfig = {
   apiKey: "AIzaSyCCJdRcwZD9l83A02h1ysPI_VWTc1IGRSM",
   authDomain: "love-hub-d4f77.firebaseapp.com",
@@ -38,10 +37,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- Cloudflare Worker URL (yours) ---
 const WORKER_URL = "https://lovehub-api.brayplaster7.workers.dev";
 
-// ---------- UI refs ----------
+// UI refs
 const authView = document.getElementById("authView");
 const pendingView = document.getElementById("pendingView");
 const appView = document.getElementById("appView");
@@ -65,21 +63,18 @@ const sendBtn = document.getElementById("sendBtn");
 const imgPick = document.getElementById("imgPick");
 const sendImgBtn = document.getElementById("sendImgBtn");
 
-// Modal UI
+// Fullscreen viewer UI
 const imgModal = document.getElementById("imgModal");
 const modalImg = document.getElementById("modalImg");
 const closeModal = document.getElementById("closeModal");
-
-// Context menu UI
-const ctxMenu = document.getElementById("ctxMenu");
-const ctxSaveChat = document.getElementById("ctxSaveChat");
-const ctxSaveDevice = document.getElementById("ctxSaveDevice");
-const ctxCancel = document.getElementById("ctxCancel");
+const saveChatBtn = document.getElementById("saveChatBtn");
+const saveDeviceBtn = document.getElementById("saveDeviceBtn");
+const fsTitle = document.getElementById("fsTitle");
 
 // Saved tab UI
 const savedGrid = document.getElementById("savedGrid");
 
-// ---------- helpers ----------
+// helpers
 function show(view){
   authView.classList.add("hidden");
   pendingView.classList.add("hidden");
@@ -93,7 +88,7 @@ function setMsg(el, text, ok=false){
   el.style.color = ok ? "#1f7a44" : "#8a1b3d";
 }
 
-// ---------- Tabs ----------
+// Tabs
 document.querySelectorAll(".tab").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
@@ -105,7 +100,7 @@ document.querySelectorAll(".tab").forEach(btn=>{
   });
 });
 
-// ---------- Love counter ----------
+// Love counter
 function updateLoveDays(){
   const start = new Date("2024-06-18T00:00:00-04:00");
   const now = new Date();
@@ -117,7 +112,7 @@ function updateLoveDays(){
 setInterval(updateLoveDays, 10_000);
 updateLoveDays();
 
-// ---------- Auth actions ----------
+// Auth
 btnSignUp.onclick = async () => {
   setMsg(authMsg, "");
   try{
@@ -150,7 +145,7 @@ btnSignIn.onclick = async () => {
 
 btnSignOut.onclick = () => signOut(auth);
 
-// ---------- Admin: load pending users ----------
+// Admin approvals
 async function loadPendingUsers(){
   pendingList.innerHTML = "";
   setMsg(adminMsg, "Loading pending users…", true);
@@ -225,7 +220,7 @@ async function loadPendingUsers(){
 }
 btnRefreshUsers?.addEventListener("click", loadPendingUsers);
 
-// ---------- Image upload helper ----------
+// Cloudflare upload
 async function uploadImageToR2(file) {
   const token = await auth.currentUser.getIdToken();
   const res = await fetch(`${WORKER_URL}/upload`, {
@@ -242,48 +237,17 @@ async function uploadImageToR2(file) {
   return await res.json(); // { key }
 }
 
-// ---------- Modal helpers ----------
-let currentBlobUrl = null;
-let currentOpenKey = null;
-let currentOpenFilename = null;
-let currentOpenContentType = null;
-
-function openModalWithBlobUrl(url, meta) {
-  currentBlobUrl = url;
-  currentOpenKey = meta?.key || null;
-  currentOpenFilename = meta?.filename || "image.jpg";
-  currentOpenContentType = meta?.contentType || "image/*";
-  modalImg.src = url;
-  imgModal.classList.remove("hidden");
-}
-
-function closeModalNow() {
-  imgModal.classList.add("hidden");
-  modalImg.src = "";
-  if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-  currentBlobUrl = null;
-  currentOpenKey = null;
-  currentOpenFilename = null;
-  currentOpenContentType = null;
-  hideCtx();
-}
-
-closeModal?.addEventListener("click", closeModalNow);
-imgModal?.addEventListener("click", (e) => {
-  if (e.target === imgModal) closeModalNow();
-});
-
-async function fetchImageBlobUrl(key) {
+// Fetch image blob
+async function fetchImageBlob(key) {
   const token = await auth.currentUser.getIdToken();
   const res = await fetch(`${WORKER_URL}/media/${encodeURIComponent(key)}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   if (!res.ok) throw new Error(await res.text());
-  const blob = await res.blob();
-  return { blob, url: URL.createObjectURL(blob) };
+  return await res.blob();
 }
 
-async function downloadBlobToDevice(blob, filename) {
+async function downloadBlob(blob, filename) {
   const a = document.createElement("a");
   const url = URL.createObjectURL(blob);
   a.href = url;
@@ -291,108 +255,69 @@ async function downloadBlobToDevice(blob, filename) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
 }
 
-// ---------- Context menu (hold/right-click) ----------
-let ctxTarget = null; // { key, filename, contentType, messageId }
+// Fullscreen viewer state
+let openKey = null;
+let openFilename = null;
+let openContentType = null;
 
-function showCtx(x, y, target){
-  ctxTarget = target;
-  ctxMenu.style.left = `${x}px`;
-  ctxMenu.style.top = `${y}px`;
-  ctxMenu.classList.remove("hidden");
+function openFullscreenWithBlob(blob, meta){
+  openKey = meta.key;
+  openFilename = meta.filename || "image.jpg";
+  openContentType = meta.contentType || "image/*";
 
-  // keep within viewport
-  const rect = ctxMenu.getBoundingClientRect();
-  const pad = 10;
-  if(rect.right > window.innerWidth - pad){
-    ctxMenu.style.left = `${window.innerWidth - rect.width - pad}px`;
-  }
-  if(rect.bottom > window.innerHeight - pad){
-    ctxMenu.style.top = `${window.innerHeight - rect.height - pad}px`;
-  }
-}
-function hideCtx(){
-  ctxMenu.classList.add("hidden");
-  ctxTarget = null;
+  fsTitle.textContent = meta.filename || "Photo";
+  const url = URL.createObjectURL(blob);
+  modalImg.src = url;
+
+  imgModal.classList.remove("hidden");
+  // Prevent background scroll
+  document.body.style.overflow = "hidden";
+
+  // clean up url when closed
+  imgModal.dataset.blobUrl = url;
 }
 
-ctxCancel?.addEventListener("click", hideCtx);
-document.addEventListener("click", (e)=>{
-  if(!ctxMenu.classList.contains("hidden") && !ctxMenu.contains(e.target)){
-    hideCtx();
-  }
+function closeFullscreen(){
+  imgModal.classList.add("hidden");
+  document.body.style.overflow = "";
+  const url = imgModal.dataset.blobUrl;
+  if(url) URL.revokeObjectURL(url);
+  imgModal.dataset.blobUrl = "";
+  modalImg.src = "";
+  openKey = null;
+  openFilename = null;
+  openContentType = null;
+}
+
+closeModal?.addEventListener("click", closeFullscreen);
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Escape" && !imgModal.classList.contains("hidden")) closeFullscreen();
 });
 
-// Save in chat: create doc in /saved
-ctxSaveChat?.addEventListener("click", async ()=>{
-  if(!ctxTarget) return;
-  hideCtx();
+// Fullscreen buttons
+saveChatBtn?.addEventListener("click", async ()=>{
+  if(!openKey) return;
   await addDoc(collection(db, "saved"), {
-    key: ctxTarget.key,
-    filename: ctxTarget.filename || "image.jpg",
-    contentType: ctxTarget.contentType || "image/*",
-    fromMessageId: ctxTarget.messageId || "",
+    key: openKey,
+    filename: openFilename,
+    contentType: openContentType,
     savedBy: auth.currentUser.uid,
     savedAt: serverTimestamp()
   });
+  saveChatBtn.textContent = "✅ Saved";
+  setTimeout(()=> saveChatBtn.textContent = "💾 Save", 1200);
 });
 
-// Save to device: download the actual bytes
-ctxSaveDevice?.addEventListener("click", async ()=>{
-  if(!ctxTarget) return;
-  hideCtx();
-  try{
-    const { blob } = await fetchImageBlobUrl(ctxTarget.key);
-    await downloadBlobToDevice(blob, ctxTarget.filename || "image.jpg");
-  }catch(e){
-    alert(e.message);
-  }
+saveDeviceBtn?.addEventListener("click", async ()=>{
+  if(!openKey) return;
+  const blob = await fetchImageBlob(openKey);
+  await downloadBlob(blob, openFilename);
 });
 
-// Long-press helper (mobile)
-function attachLongPress(el, getTarget){
-  let t = null;
-  const start = (ev) => {
-    clearTimeout(t);
-    const pt = (ev.touches && ev.touches[0]) ? ev.touches[0] : ev;
-    t = setTimeout(()=>{
-      const target = getTarget();
-      showCtx(pt.clientX, pt.clientY, target);
-    }, 450);
-  };
-  const cancel = () => clearTimeout(t);
-
-  el.addEventListener("touchstart", start, { passive:true });
-  el.addEventListener("touchend", cancel);
-  el.addEventListener("touchmove", cancel);
-  el.addEventListener("touchcancel", cancel);
-}
-
-// Desktop right-click
-function attachRightClick(el, getTarget){
-  el.addEventListener("contextmenu", (e)=>{
-    e.preventDefault();
-    showCtx(e.clientX, e.clientY, getTarget());
-  });
-}
-
-// Also allow menu on the big modal image
-attachLongPress(modalImg, ()=>({
-  key: currentOpenKey,
-  filename: currentOpenFilename,
-  contentType: currentOpenContentType,
-  messageId: ""
-}));
-attachRightClick(modalImg, ()=>({
-  key: currentOpenKey,
-  filename: currentOpenFilename,
-  contentType: currentOpenContentType,
-  messageId: ""
-}));
-
-// ---------- Saved tab realtime ----------
+// Saved tab realtime
 function startSavedRealtime(){
   if(!savedGrid) return;
 
@@ -401,7 +326,7 @@ function startSavedRealtime(){
   onSnapshot(qSaved, async (snap) => {
     savedGrid.innerHTML = "";
 
-    snap.forEach((d)=>{
+    snap.forEach(async (d)=>{
       const s = d.data();
 
       const card = document.createElement("div");
@@ -411,34 +336,22 @@ function startSavedRealtime(){
       img.className = "savedThumb";
       img.alt = "saved";
 
-      // Load thumbnail on demand (click to view)
-      img.addEventListener("click", async ()=>{
-        try{
-          const { url } = await fetchImageBlobUrl(s.key);
-          openModalWithBlobUrl(url, {
-            key: s.key,
-            filename: s.filename,
-            contentType: s.contentType
-          });
-        }catch(e){
-          alert(e.message);
-        }
-      });
+      // Load thumb
+      try{
+        const blob = await fetchImageBlob(s.key);
+        const url = URL.createObjectURL(blob);
+        img.src = url;
 
-      // show filename
+        img.addEventListener("click", ()=>{
+          openFullscreenWithBlob(blob, { key: s.key, filename: s.filename, contentType: s.contentType });
+        });
+      }catch{
+        img.src = "";
+      }
+
       const meta = document.createElement("div");
       meta.className = "muted tiny";
       meta.textContent = s.filename || "image";
-
-      // lazy load a thumb (fetch + set src)
-      (async ()=>{
-        try{
-          const { url } = await fetchImageBlobUrl(s.key);
-          img.src = url;
-        }catch{
-          img.src = "";
-        }
-      })();
 
       card.appendChild(img);
       card.appendChild(meta);
@@ -447,7 +360,7 @@ function startSavedRealtime(){
   });
 }
 
-// ---------- Chat (text + snap images) ----------
+// Chat realtime
 function startChatRealtime(){
   if(!chatBox) return;
 
@@ -501,7 +414,6 @@ function startChatRealtime(){
     }
   });
 
-  // realtime feed
   const qMsg = query(collection(db, "messages"), orderBy("createdAt"), limit(200));
 
   onSnapshot(qMsg, (snap) => {
@@ -520,7 +432,7 @@ function startChatRealtime(){
 
         const viewDocRef = doc(db, "messages", d.id, "views", auth.currentUser.uid);
 
-        // check opened state
+        // opened check
         getDoc(viewDocRef).then((vs) => {
           if (vs.exists()) {
             div.classList.remove("snap");
@@ -529,28 +441,14 @@ function startChatRealtime(){
           }
         });
 
-        // Attach save menu (works even if opened)
-        attachLongPress(div, ()=>({
-          key: m.key,
-          filename: m.filename || "image.jpg",
-          contentType: m.contentType || "image/*",
-          messageId: d.id
-        }));
-        attachRightClick(div, ()=>({
-          key: m.key,
-          filename: m.filename || "image.jpg",
-          contentType: m.contentType || "image/*",
-          messageId: d.id
-        }));
-
-        // Tap-to-view once (viewer)
+        // Tap-to-view once
         div.addEventListener("click", async () => {
           const vs = await getDoc(viewDocRef);
           if (vs.exists()) return;
 
           try {
-            const { url } = await fetchImageBlobUrl(m.key);
-            openModalWithBlobUrl(url, { key: m.key, filename: m.filename, contentType: m.contentType });
+            const blob = await fetchImageBlob(m.key);
+            openFullscreenWithBlob(blob, { key: m.key, filename: m.filename, contentType: m.contentType });
 
             await setDoc(viewDocRef, { openedAt: serverTimestamp() });
 
@@ -573,7 +471,7 @@ function startChatRealtime(){
   });
 }
 
-// ---------- Auth gate ----------
+// Auth gate
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
     show(authView);
@@ -599,27 +497,19 @@ onAuthStateChanged(auth, async (user)=>{
 
   const data = snap.data();
 
-  if(data.denied){
+  if(data.denied || !data.approved){
     show(pendingView);
     return;
   }
 
-  if(!data.approved){
-    show(pendingView);
-    return;
-  }
-
-  // approved user
   show(appView);
 
-  // admin tab
   if(data.isAdmin){
     adminTabBtn?.classList.remove("hidden");
   } else {
     adminTabBtn?.classList.add("hidden");
   }
 
-  // start realtime
   startChatRealtime();
   startSavedRealtime();
 });
