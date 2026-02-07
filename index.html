@@ -191,13 +191,65 @@
     </section>
 
     <!-- LOVE -->
-    <section class="panel hidden" id="tab-love">
-      <h3>Love 💞</h3>
-      <div class="loveCard">
-        <div class="loveBig" id="loveDays">—</div>
-        <div class="muted">days since June 18, 2024 (EST)</div>
+   <div id="tab-love" class="panel hidden">
+  <div class="loveCard">
+    <div class="loveTopBar">
+      <button id="loveSettingsBtn" class="loveIconBtn" title="Settings">⚙️</button>
+      <div class="loveTitle">
+        <div class="loveNames" id="loveNames">Bray & Ali</div>
+        <div class="loveSub">private + cute</div>
       </div>
-    </section>
+      <button id="loveShareBtn" class="loveIconBtn" title="Share">⤴️</button>
+    </div>
+
+    <div class="loveHero" id="loveHero">
+      <!-- optional overlay for sparkle vibe -->
+      <div class="loveHeroGlow"></div>
+    </div>
+
+    <div class="loveDateStrip">
+      <span id="loveStartPretty">June 18, 2024</span>
+    </div>
+
+    <div class="loveBody">
+      <div class="loveBigLabel">YOU HAVE BEEN TOGETHER FOR</div>
+      <div class="loveBigValue" id="loveYMD">—</div>
+
+      <div class="loveDivider"></div>
+
+      <div class="loveBigLabel">IN OTHER WORDS</div>
+
+      <div class="loveStats">
+        <div class="loveStat">
+          <div class="loveStatNum" id="loveMonths">—</div>
+          <div class="loveStatLab">months</div>
+        </div>
+        <div class="loveStat">
+          <div class="loveStatNum" id="loveWeeks">—</div>
+          <div class="loveStatLab">weeks</div>
+        </div>
+        <div class="loveStat">
+          <div class="loveStatNum" id="loveDays2">—</div>
+          <div class="loveStatLab">days</div>
+        </div>
+        <div class="loveStat">
+          <div class="loveStatNum" id="loveHours">—</div>
+          <div class="loveStatLab">hours</div>
+        </div>
+      </div>
+
+      <div class="loveMini">
+        <span class="dot">💗</span>
+        <span>Next anniversary in</span>
+        <b id="loveNextAnniv">—</b>
+      </div>
+
+      <!-- hidden file input for settings -->
+      <input id="loveBgPick" type="file" accept="image/*" class="hidden" />
+    </div>
+  </div>
+</div>
+
 
     <!-- CALENDAR -->
     <section class="panel hidden" id="tab-calendar">
