@@ -71,7 +71,7 @@
         <button id="sendImgBtn" class="btn">Send Pic 📸</button>
       </div>
 
-      <p class="muted tiny">Tip: hold/right-click a pic bubble to save.</p>
+      <p class="muted tiny">Tap a pic message to open it.</p>
     </section>
 
     <!-- SAVED -->
@@ -115,22 +115,22 @@
     </section>
   </main>
 
-  <!-- IMAGE MODAL -->
-  <div id="imgModal" class="modal hidden">
-    <div class="modalInner">
-      <img id="modalImg" class="modalImg" />
-      <div class="row">
-        <button id="closeModal" class="btn primary">Close</button>
+  <!-- FULLSCREEN IMAGE VIEWER -->
+  <div id="imgModal" class="fs hidden">
+    <div class="fsTop">
+      <button id="closeModal" class="fsBtn">✕</button>
+      <div class="fsTitle" id="fsTitle">Photo</div>
+      <div class="fsTopRight">
+        <button id="saveChatBtn" class="fsBtn">💾 Save</button>
+        <button id="saveDeviceBtn" class="fsBtn primary">⬇️ Download</button>
       </div>
-      <p class="muted tiny">Hold/right-click the image for options.</p>
     </div>
-  </div>
 
-  <!-- Context Menu -->
-  <div id="ctxMenu" class="ctx hidden">
-    <button id="ctxSaveChat" class="ctxBtn">💾 Save in Chat</button>
-    <button id="ctxSaveDevice" class="ctxBtn">⬇️ Save to Device</button>
-    <button id="ctxCancel" class="ctxBtn danger">Cancel</button>
+    <div class="fsBody">
+      <img id="modalImg" class="fsImg" alt="photo"/>
+    </div>
+
+    <div class="fsHint muted tiny">Saved adds it to the Saved tab for both of you 💗</div>
   </div>
 
   <script type="module" src="app.js"></script>
