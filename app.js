@@ -24,21 +24,6 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ===============================
-// LOVE HUB — app.js (FULL)
-// - Firebase Auth sign-in/up
-// - Pending approval gate
-// - Admin approval panel
-// - Realtime chat (text)
-// - Realtime image messages (view-once per user)
-// - Fullscreen image viewer w/ Save in Chat + Download buttons
-// - Saved tab (shared saved items)
-// - Draw tab (canvas tools + save drawings to R2 + drawings gallery)
-// Storage:
-// - Images + drawings -> Cloudflare Worker (/upload, /media/<key>) -> R2
-// ===============================
-
-// --- Firebase config (yours) ---
 const firebaseConfig = {
   apiKey: "AIzaSyCCJdRcwZD9l83A02h1ysPI_VWTc1IGRSM",
   authDomain: "love-hub-d4f77.firebaseapp.com",
@@ -48,15 +33,13 @@ const firebaseConfig = {
   appId: "1:189429669803:web:e2e6cb2488d234e1fafcee"
 };
 
-// --- Cloudflare Worker URL (yours) ---
 const WORKER_URL = "https://lovehub-api.brayplaster7.workers.dev";
 
-// ---------- init ----------
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ---------- UI refs ----------
+// UI refs
 const authView = document.getElementById("authView");
 const pendingView = document.getElementById("pendingView");
 const appView = document.getElementById("appView");
@@ -80,7 +63,7 @@ const sendBtn = document.getElementById("sendBtn");
 const imgPick = document.getElementById("imgPick");
 const sendImgBtn = document.getElementById("sendImgBtn");
 
-// Fullscreen viewer UI
+// Fullscreen image viewer UI
 const imgModal = document.getElementById("imgModal");
 const modalImg = document.getElementById("modalImg");
 const closeModal = document.getElementById("closeModal");
@@ -91,61 +74,60 @@ const fsTitle = document.getElementById("fsTitle");
 // Saved tab UI
 const savedGrid = document.getElementById("savedGrid");
 
-// Draw refs
+// Draw UI
 const drawCanvas = document.getElementById("drawCanvas");
+const canvasWrap = document.getElementById("canvasWrap");
 const penColor = document.getElementById("penColor");
 const penSize = document.getElementById("penSize");
 const penBtn = document.getElementById("penBtn");
 const eraserBtn = document.getElementById("eraserBtn");
 const clearBtn = document.getElementById("clearBtn");
+const fsDrawBtn = document.getElementById("fsDrawBtn");
 const saveDrawBtn = document.getElementById("saveDrawBtn");
 const drawGallery = document.getElementById("drawGallery");
 
-// ---------- helpers ----------
-function show(view) {
+// helpers
+function show(view){
   authView.classList.add("hidden");
   pendingView.classList.add("hidden");
   appView.classList.add("hidden");
   btnSignOut.classList.add("hidden");
   view.classList.remove("hidden");
 }
-
-function setMsg(el, text, ok = false) {
-  if (!el) return;
+function setMsg(el, text, ok=false){
+  if(!el) return;
   el.textContent = text || "";
   el.style.color = ok ? "#1f7a44" : "#8a1b3d";
 }
 
-// ---------- Tabs ----------
-document.querySelectorAll(".tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+// Tabs
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
     btn.classList.add("active");
 
     const tab = btn.dataset.tab;
-    document.querySelectorAll(".panel").forEach((p) => p.classList.add("hidden"));
-    const panel = document.getElementById(`tab-${tab}`);
-    if (panel) panel.classList.remove("hidden");
+    document.querySelectorAll(".panel").forEach(p=>p.classList.add("hidden"));
+    document.getElementById(`tab-${tab}`).classList.remove("hidden");
   });
 });
 
-// ---------- Love counter ----------
-function updateLoveDays() {
-  // June 18, 2024 (EST/EDT)
+// Love counter
+function updateLoveDays(){
   const start = new Date("2024-06-18T00:00:00-04:00");
   const now = new Date();
   const diffMs = now.getTime() - start.getTime();
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const days = Math.floor(diffMs / (1000*60*60*24));
   const el = document.getElementById("loveDays");
   if (el) el.textContent = days.toLocaleString();
 }
 setInterval(updateLoveDays, 10_000);
 updateLoveDays();
 
-// ---------- Auth actions ----------
-btnSignUp?.addEventListener("click", async () => {
+// Auth
+btnSignUp.onclick = async () => {
   setMsg(authMsg, "");
-  try {
+  try{
     const email = emailEl.value.trim();
     const password = passEl.value;
     const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -159,29 +141,28 @@ btnSignUp?.addEventListener("click", async () => {
     });
 
     setMsg(authMsg, "Account created! Waiting for approval 💗", true);
-  } catch (e) {
+  }catch(e){
     setMsg(authMsg, e.message);
   }
-});
+};
 
-btnSignIn?.addEventListener("click", async () => {
+btnSignIn.onclick = async () => {
   setMsg(authMsg, "");
-  try {
+  try{
     await signInWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
-  } catch (e) {
+  }catch(e){
     setMsg(authMsg, e.message);
   }
-});
+};
 
-btnSignOut?.addEventListener("click", () => signOut(auth));
+btnSignOut.onclick = () => signOut(auth);
 
-// ---------- Admin: load pending users ----------
-async function loadPendingUsers() {
-  if (!pendingList) return;
+// Admin approvals
+async function loadPendingUsers(){
   pendingList.innerHTML = "";
   setMsg(adminMsg, "Loading pending users…", true);
 
-  try {
+  try{
     const q = query(
       collection(db, "users"),
       where("approved", "==", false),
@@ -190,14 +171,14 @@ async function loadPendingUsers() {
 
     const snap = await getDocs(q);
 
-    if (snap.empty) {
+    if(snap.empty){
       setMsg(adminMsg, "No pending users right now 💗", true);
       return;
     }
 
     setMsg(adminMsg, `Pending: ${snap.size}`, true);
 
-    snap.forEach((d) => {
+    snap.forEach(d=>{
       const u = d.data();
 
       const row = document.createElement("div");
@@ -239,17 +220,19 @@ async function loadPendingUsers() {
 
       actions.appendChild(approveBtn);
       actions.appendChild(denyBtn);
+
       row.appendChild(left);
       row.appendChild(actions);
       pendingList.appendChild(row);
     });
-  } catch (e) {
+
+  }catch(e){
     setMsg(adminMsg, e.message);
   }
 }
 btnRefreshUsers?.addEventListener("click", loadPendingUsers);
 
-// ---------- Cloudflare upload helper ----------
+// Upload to R2
 async function uploadImageToR2(file) {
   const token = await auth.currentUser.getIdToken();
   const res = await fetch(`${WORKER_URL}/upload`, {
@@ -266,7 +249,7 @@ async function uploadImageToR2(file) {
   return await res.json(); // { key }
 }
 
-// ---------- Fetch image blob ----------
+// Fetch blob
 async function fetchImageBlob(key) {
   const token = await auth.currentUser.getIdToken();
   const res = await fetch(`${WORKER_URL}/media/${encodeURIComponent(key)}`, {
@@ -276,6 +259,7 @@ async function fetchImageBlob(key) {
   return await res.blob();
 }
 
+// Download
 async function downloadBlob(blob, filename) {
   const a = document.createElement("a");
   const url = URL.createObjectURL(blob);
@@ -287,38 +271,33 @@ async function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1200);
 }
 
-// ---------- Fullscreen viewer state ----------
+// Fullscreen viewer state
 let openKey = null;
 let openFilename = null;
 let openContentType = null;
 
-function openFullscreenWithBlob(blob, meta) {
+function openFullscreenWithBlob(blob, meta){
   openKey = meta.key;
   openFilename = meta.filename || "image.jpg";
   openContentType = meta.contentType || "image/*";
 
-  if (fsTitle) fsTitle.textContent = meta.filename || "Photo";
-
+  fsTitle.textContent = meta.filename || "Photo";
   const url = URL.createObjectURL(blob);
   modalImg.src = url;
 
   imgModal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
-
   imgModal.dataset.blobUrl = url;
 
-  // reset button text if it exists
   if (saveChatBtn) saveChatBtn.textContent = "💾 Save";
 }
 
-function closeFullscreen() {
+function closeFullscreen(){
   imgModal.classList.add("hidden");
   document.body.style.overflow = "";
-
   const url = imgModal.dataset.blobUrl;
-  if (url) URL.revokeObjectURL(url);
+  if(url) URL.revokeObjectURL(url);
   imgModal.dataset.blobUrl = "";
-
   modalImg.src = "";
   openKey = null;
   openFilename = null;
@@ -326,13 +305,13 @@ function closeFullscreen() {
 }
 
 closeModal?.addEventListener("click", closeFullscreen);
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && imgModal && !imgModal.classList.contains("hidden")) closeFullscreen();
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Escape" && !imgModal.classList.contains("hidden")) closeFullscreen();
 });
 
-// Fullscreen viewer buttons
-saveChatBtn?.addEventListener("click", async () => {
-  if (!openKey) return;
+// Fullscreen buttons
+saveChatBtn?.addEventListener("click", async ()=>{
+  if(!openKey) return;
   await addDoc(collection(db, "saved"), {
     key: openKey,
     filename: openFilename,
@@ -341,11 +320,11 @@ saveChatBtn?.addEventListener("click", async () => {
     savedAt: serverTimestamp()
   });
   saveChatBtn.textContent = "✅ Saved";
-  setTimeout(() => (saveChatBtn.textContent = "💾 Save"), 1200);
+  setTimeout(()=> saveChatBtn.textContent = "💾 Save", 1200);
 });
 
-saveDeviceBtn?.addEventListener("click", async () => {
-  if (!openKey) return;
+saveDeviceBtn?.addEventListener("click", async ()=>{
+  if(!openKey) return;
   try {
     const blob = await fetchImageBlob(openKey);
     await downloadBlob(blob, openFilename || "photo.jpg");
@@ -354,16 +333,16 @@ saveDeviceBtn?.addEventListener("click", async () => {
   }
 });
 
-// ---------- Saved tab realtime ----------
-function startSavedRealtime() {
-  if (!savedGrid) return;
+// Saved tab realtime
+function startSavedRealtime(){
+  if(!savedGrid) return;
 
   const qSaved = query(collection(db, "saved"), orderBy("savedAt"), limit(200));
 
   onSnapshot(qSaved, (snap) => {
     savedGrid.innerHTML = "";
 
-    snap.forEach((d) => {
+    snap.forEach((d)=>{
       const s = d.data();
 
       const card = document.createElement("div");
@@ -373,16 +352,14 @@ function startSavedRealtime() {
       img.className = "savedThumb";
       img.alt = "saved";
 
-      (async () => {
-        try {
+      (async ()=>{
+        try{
           const blob = await fetchImageBlob(s.key);
-          const url = URL.createObjectURL(blob);
-          img.src = url;
-
-          img.addEventListener("click", () => {
-            openFullscreenWithBlob(blob, { key: s.key, filename: s.filename, contentType: s.contentType });
+          img.src = URL.createObjectURL(blob);
+          img.addEventListener("click", ()=>{
+            openFullscreenWithBlob(blob, { key:s.key, filename:s.filename, contentType:s.contentType });
           });
-        } catch {
+        }catch{
           img.src = "";
         }
       })();
@@ -398,14 +375,13 @@ function startSavedRealtime() {
   });
 }
 
-// ---------- Chat (text + snap images) ----------
-function startChatRealtime() {
-  if (!chatBox) return;
+// Chat realtime
+function startChatRealtime(){
+  if(!chatBox) return;
 
-  // send text
   sendBtn?.addEventListener("click", async () => {
     const text = chatText.value.trim();
-    if (!text) return;
+    if(!text) return;
 
     await addDoc(collection(db, "messages"), {
       kind: "text",
@@ -418,7 +394,6 @@ function startChatRealtime() {
     chatText.value = "";
   });
 
-  // send image
   sendImgBtn?.addEventListener("click", async () => {
     if (!imgPick?.files?.length) return;
     const file = imgPick.files[0];
@@ -452,7 +427,6 @@ function startChatRealtime() {
     }
   });
 
-  // realtime feed
   const qMsg = query(collection(db, "messages"), orderBy("createdAt"), limit(200));
 
   onSnapshot(qMsg, (snap) => {
@@ -471,7 +445,6 @@ function startChatRealtime() {
 
         const viewDocRef = doc(db, "messages", d.id, "views", auth.currentUser.uid);
 
-        // opened check
         getDoc(viewDocRef).then((vs) => {
           if (vs.exists()) {
             div.classList.remove("snap");
@@ -480,14 +453,13 @@ function startChatRealtime() {
           }
         });
 
-        // Tap-to-view once
         div.addEventListener("click", async () => {
           const vs = await getDoc(viewDocRef);
           if (vs.exists()) return;
 
           try {
             const blob = await fetchImageBlob(m.key);
-            openFullscreenWithBlob(blob, { key: m.key, filename: m.filename, contentType: m.contentType });
+            openFullscreenWithBlob(blob, { key:m.key, filename:m.filename, contentType:m.contentType });
 
             await setDoc(viewDocRef, { openedAt: serverTimestamp() });
 
@@ -498,6 +470,7 @@ function startChatRealtime() {
             alert(e.message);
           }
         });
+
       } else {
         div.textContent = m.text || "";
       }
@@ -509,9 +482,9 @@ function startChatRealtime() {
   });
 }
 
-// ---------- Draw board ----------
-function startDrawingBoard() {
-  if (!drawCanvas) return;
+// Draw board + fullscreen
+function startDrawingBoard(){
+  if(!drawCanvas || !canvasWrap) return;
 
   const ctx = drawCanvas.getContext("2d");
   ctx.lineCap = "round";
@@ -520,11 +493,11 @@ function startDrawingBoard() {
   let drawing = false;
   let mode = "pen"; // pen | eraser
 
-  // fill white background so PNG isn't transparent
+  // white base
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+  ctx.fillRect(0,0,drawCanvas.width, drawCanvas.height);
 
-  function getPos(e) {
+  function getPos(e){
     const rect = drawCanvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -534,15 +507,15 @@ function startDrawingBoard() {
     };
   }
 
-  function start(e) {
+  function start(e){
     drawing = true;
     const p = getPos(e);
     ctx.beginPath();
     ctx.moveTo(p.x, p.y);
   }
 
-  function move(e) {
-    if (!drawing) return;
+  function move(e){
+    if(!drawing) return;
     const p = getPos(e);
 
     ctx.strokeStyle = (mode === "eraser") ? "#ffffff" : (penColor?.value || "#ff4fa5");
@@ -552,38 +525,69 @@ function startDrawingBoard() {
     ctx.stroke();
   }
 
-  function end() {
+  function end(){
     drawing = false;
     ctx.closePath();
   }
 
   // mouse
-  drawCanvas.addEventListener("mousedown", (e) => start(e));
-  drawCanvas.addEventListener("mousemove", (e) => move(e));
+  drawCanvas.addEventListener("mousedown", (e)=>start(e));
+  drawCanvas.addEventListener("mousemove", (e)=>move(e));
   window.addEventListener("mouseup", end);
 
-  // touch (mobile)
-  drawCanvas.addEventListener("touchstart", (e) => { e.preventDefault(); start(e); }, { passive: false });
-  drawCanvas.addEventListener("touchmove", (e) => { e.preventDefault(); move(e); }, { passive: false });
+  // touch
+  drawCanvas.addEventListener("touchstart", (e)=>{ e.preventDefault(); start(e); }, { passive:false });
+  drawCanvas.addEventListener("touchmove", (e)=>{ e.preventDefault(); move(e); }, { passive:false });
   drawCanvas.addEventListener("touchend", end);
 
-  penBtn?.addEventListener("click", () => (mode = "pen"));
-  eraserBtn?.addEventListener("click", () => (mode = "eraser"));
+  penBtn?.addEventListener("click", ()=> mode="pen");
+  eraserBtn?.addEventListener("click", ()=> mode="eraser");
 
-  clearBtn?.addEventListener("click", () => {
-    ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+  clearBtn?.addEventListener("click", ()=>{
+    ctx.clearRect(0,0,drawCanvas.width, drawCanvas.height);
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+    ctx.fillRect(0,0,drawCanvas.width, drawCanvas.height);
   });
 
-  saveDrawBtn?.addEventListener("click", async () => {
-    try {
+  // ✅ Fullscreen toggle for canvas wrapper
+  function isFullscreen(){
+    return document.fullscreenElement === canvasWrap;
+  }
+
+  async function enterFs(){
+    await canvasWrap.requestFullscreen();
+    if (fsDrawBtn) fsDrawBtn.textContent = "Exit Fullscreen";
+  }
+
+  async function exitFs(){
+    await document.exitFullscreen();
+    if (fsDrawBtn) fsDrawBtn.textContent = "⛶ Fullscreen";
+  }
+
+  fsDrawBtn?.addEventListener("click", async ()=>{
+    try{
+      if(!document.fullscreenEnabled) return alert("Fullscreen not supported on this browser.");
+      if(isFullscreen()) await exitFs();
+      else await enterFs();
+    }catch(e){
+      alert(e.message);
+    }
+  });
+
+  document.addEventListener("fullscreenchange", ()=>{
+    if (!fsDrawBtn) return;
+    fsDrawBtn.textContent = isFullscreen() ? "Exit Fullscreen" : "⛶ Fullscreen";
+  });
+
+  // save drawing
+  saveDrawBtn?.addEventListener("click", async ()=>{
+    try{
       saveDrawBtn.disabled = true;
 
-      const blob = await new Promise((resolve) => drawCanvas.toBlob(resolve, "image/png", 1));
-      if (!blob) throw new Error("Could not save drawing.");
+      const blob = await new Promise((resolve)=> drawCanvas.toBlob(resolve, "image/png", 1));
+      if(!blob) throw new Error("Could not save drawing.");
 
-      const file = new File([blob], `drawing_${Date.now()}.png`, { type: "image/png" });
+      const file = new File([blob], `drawing_${Date.now()}.png`, { type:"image/png" });
 
       const { key } = await uploadImageToR2(file);
 
@@ -597,24 +601,23 @@ function startDrawingBoard() {
       });
 
       alert("Saved 💗");
-    } catch (e) {
+    }catch(e){
       alert(e.message);
-    } finally {
+    }finally{
       saveDrawBtn.disabled = false;
     }
   });
 }
 
-// ---------- Draw gallery realtime ----------
-function startDrawGallery() {
-  if (!drawGallery) return;
+function startDrawGallery(){
+  if(!drawGallery) return;
 
   const qDraw = query(collection(db, "drawings"), orderBy("createdAt"), limit(200));
 
-  onSnapshot(qDraw, (snap) => {
+  onSnapshot(qDraw, (snap)=>{
     drawGallery.innerHTML = "";
 
-    snap.forEach((d) => {
+    snap.forEach((d)=>{
       const it = d.data();
 
       const card = document.createElement("div");
@@ -624,16 +627,14 @@ function startDrawGallery() {
       img.className = "savedThumb";
       img.alt = "drawing";
 
-      (async () => {
-        try {
+      (async ()=>{
+        try{
           const blob = await fetchImageBlob(it.key);
-          const url = URL.createObjectURL(blob);
-          img.src = url;
-
-          img.addEventListener("click", () => {
-            openFullscreenWithBlob(blob, { key: it.key, filename: it.filename, contentType: it.contentType });
+          img.src = URL.createObjectURL(blob);
+          img.addEventListener("click", ()=>{
+            openFullscreenWithBlob(blob, { key:it.key, filename:it.filename, contentType:it.contentType });
           });
-        } catch {
+        }catch{
           img.src = "";
         }
       })();
@@ -649,9 +650,9 @@ function startDrawGallery() {
   });
 }
 
-// ---------- Auth gate ----------
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
+// Auth gate
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){
     show(authView);
     return;
   }
@@ -661,7 +662,7 @@ onAuthStateChanged(auth, async (user) => {
   const userRef = doc(db, "users", user.uid);
   const snap = await getDoc(userRef);
 
-  if (!snap.exists()) {
+  if(!snap.exists()){
     await setDoc(userRef, {
       email: user.email || "",
       approved: false,
@@ -675,19 +676,16 @@ onAuthStateChanged(auth, async (user) => {
 
   const data = snap.data();
 
-  if (data.denied || !data.approved) {
+  if(data.denied || !data.approved){
     show(pendingView);
     return;
   }
 
-  // approved user
   show(appView);
 
-  // admin tab
-  if (data.isAdmin) adminTabBtn?.classList.remove("hidden");
+  if(data.isAdmin) adminTabBtn?.classList.remove("hidden");
   else adminTabBtn?.classList.add("hidden");
 
-  // start realtime features
   startChatRealtime();
   startSavedRealtime();
   startDrawingBoard();
