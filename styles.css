@@ -215,7 +215,7 @@ body{
   color:rgba(59,27,42,.7);
 }
 
-/* Saved grid */
+/* Saved grid (also used for Draw gallery) */
 .savedGrid{
   margin-top:12px;
   display:grid;
@@ -237,6 +237,29 @@ body{
   object-fit:cover;
   background: rgba(255,255,255,.2);
 }
+
+/* Draw */
+.drawBar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-bottom:10px;
+}
+.canvasWrap{
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.18);
+}
+#drawCanvas{
+  width:100%;
+  height:auto;
+  display:block;
+  background: rgba(255,255,255,.92);
+  touch-action:none;
+}
+.mt{margin-top:16px}
 
 /* FULLSCREEN IMAGE VIEWER */
 .fs{
