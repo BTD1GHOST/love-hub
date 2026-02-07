@@ -77,11 +77,13 @@ const savedGrid = document.getElementById("savedGrid");
 // Draw UI
 const drawCanvas = document.getElementById("drawCanvas");
 const canvasWrap = document.getElementById("canvasWrap");
+const toolMode = document.getElementById("toolMode");
 const brushType = document.getElementById("brushType");
 const penColor = document.getElementById("penColor");
 const penSize = document.getElementById("penSize");
 const penOpacity = document.getElementById("penOpacity");
 const penSmooth = document.getElementById("penSmooth");
+const fillTol = document.getElementById("fillTol");
 const undoBtn = document.getElementById("undoBtn");
 const redoBtn = document.getElementById("redoBtn");
 const symBtn = document.getElementById("symBtn");
@@ -90,7 +92,13 @@ const fsDrawBtn = document.getElementById("fsDrawBtn");
 const saveDrawBtn = document.getElementById("saveDrawBtn");
 const drawGallery = document.getElementById("drawGallery");
 
-// helpers
+// Text controls
+const textControls = document.getElementById("textControls");
+const textValue = document.getElementById("textValue");
+const textFont = document.getElementById("textFont");
+const textSize = document.getElementById("textSize");
+const textBold = document.getElementById("textBold");
+
 function show(view){
   authView.classList.add("hidden");
   pendingView.classList.add("hidden");
@@ -485,7 +493,7 @@ function startChatRealtime(){
 }
 
 /* ===============================
-   DRAW — Advanced Brush Engine
+   DRAW — Advanced + Bucket + Text
    =============================== */
 
 function startDrawingBoard(){
@@ -499,10 +507,31 @@ function startDrawingBoard(){
   ctx.fillRect(0,0,drawCanvas.width, drawCanvas.height);
   ctx.restore();
 
+  // text tool state
+  let boldOn = false;
+  textBold?.addEventListener("click", ()=>{
+    boldOn = !boldOn;
+    textBold.classList.toggle("activeBold", boldOn);
+    textBold.textContent = boldOn ? "B ✓" : "B";
+  });
+
+  // toggle text controls visibility based on tool mode
+  function refreshToolUI(){
+    const mode = toolMode?.value || "brush";
+    if (textControls) textControls.style.display = (mode === "text") ? "flex" : "none";
+  }
+  toolMode?.addEventListener("change", refreshToolUI);
+  refreshToolUI();
+
   // undo/redo stacks
   const UNDO_LIMIT = 30;
   let undoStack = [];
   let redoStack = [];
+
+  function updateUndoRedoButtons(){
+    if (undoBtn) undoBtn.disabled = undoStack.length === 0;
+    if (redoBtn) redoBtn.disabled = redoStack.length === 0;
+  }
 
   function snapshot(){
     try{
@@ -511,19 +540,10 @@ function startDrawingBoard(){
       if (undoStack.length > UNDO_LIMIT) undoStack.shift();
       redoStack = [];
       updateUndoRedoButtons();
-    }catch{
-      // ignore
-    }
+    }catch{}
   }
 
-  function restore(img){
-    ctx.putImageData(img,0,0);
-  }
-
-  function updateUndoRedoButtons(){
-    if (undoBtn) undoBtn.disabled = undoStack.length === 0;
-    if (redoBtn) redoBtn.disabled = redoStack.length === 0;
-  }
+  function restore(img){ ctx.putImageData(img,0,0); }
 
   undoBtn?.addEventListener("click", ()=>{
     if (!undoStack.length) return;
@@ -543,6 +563,7 @@ function startDrawingBoard(){
     updateUndoRedoButtons();
   });
 
+  // symmetry
   let symmetry = false;
   symBtn?.addEventListener("click", ()=>{
     symmetry = !symmetry;
@@ -563,52 +584,43 @@ function startDrawingBoard(){
       if(!document.fullscreenEnabled) return alert("Fullscreen not supported here.");
       if(isFullscreen()) await document.exitFullscreen();
       else await canvasWrap.requestFullscreen();
-    }catch(e){
-      alert(e.message);
-    }
+    }catch(e){ alert(e.message); }
   });
   document.addEventListener("fullscreenchange", ()=>{
     if (!fsDrawBtn) return;
     fsDrawBtn.textContent = isFullscreen() ? "Exit Fullscreen" : "⛶ Fullscreen";
   });
 
-  // smoothing (stabilizer): exponentially move toward pointer
+  // smoothing helper
   function smoothPoint(prev, next, smoothAmt){
-    // smoothAmt 0..0.9
     return {
       x: prev.x + (next.x - prev.x) * (1 - smoothAmt),
       y: prev.y + (next.y - prev.y) * (1 - smoothAmt)
     };
   }
 
-  function getSettings(){
+  function getBrushSettings(){
     const type = brushType?.value || "pen";
     const color = penColor?.value || "#ff4fa5";
     const size = Number(penSize?.value || 12);
     const opacity = Number(penOpacity?.value || 85) / 100;
-    const smooth = Number(penSmooth?.value || 35) / 100; // 0..0.9-ish
+    const smooth = Number(penSmooth?.value || 35) / 100;
 
-    // base “presets”
     const presets = {
-      pen:        { mode:"stroke", alpha: opacity, sizeMult: 1.0, shadow:0, comp:"source-over" },
-      pencil:     { mode:"stroke", alpha: opacity*0.45, sizeMult: 0.8, jitter: 0.8, shadow:0, comp:"source-over" },
-      marker:     { mode:"stroke", alpha: opacity*0.75, sizeMult: 1.2, shadow:0, comp:"source-over" },
-      highlighter:{ mode:"stroke", alpha: opacity*0.25, sizeMult: 1.8, shadow:0, comp:"multiply" },
-      spray:      { mode:"spray",  alpha: opacity*0.25, sizeMult: 1.6, density: 18, comp:"source-over" },
-      calligraphy:{ mode:"stamp",  alpha: opacity*0.8,  sizeMult: 1.4, angle: 0, comp:"source-over" },
-      neon:       { mode:"stroke", alpha: opacity*0.65, sizeMult: 1.2, shadow: 18, comp:"source-over" },
-      watercolor: { mode:"stroke", alpha: opacity*0.18, sizeMult: 2.0, shadow: 6, comp:"source-over" },
-      eraser:     { mode:"stroke", alpha: 1.0,          sizeMult: 1.3, shadow:0, comp:"destination-out" }
+      pen:        { mode:"stroke", alpha: opacity,      sizeMult: 1.0, shadow:0,  comp:"source-over" },
+      pencil:     { mode:"stroke", alpha: opacity*0.45, sizeMult: 0.8, jitter:0.8,shadow:0,  comp:"source-over" },
+      marker:     { mode:"stroke", alpha: opacity*0.75, sizeMult: 1.2, shadow:0,  comp:"source-over" },
+      highlighter:{ mode:"stroke", alpha: opacity*0.25, sizeMult: 1.8, shadow:0,  comp:"multiply" },
+      spray:      { mode:"spray",  alpha: opacity*0.25, sizeMult: 1.6, density:18, comp:"source-over" },
+      calligraphy:{ mode:"stamp",  alpha: opacity*0.8,  sizeMult: 1.4, shadow:0,  comp:"source-over" },
+      neon:       { mode:"stroke", alpha: opacity*0.65, sizeMult: 1.2, shadow:18, comp:"source-over" },
+      watercolor: { mode:"stroke", alpha: opacity*0.18, sizeMult: 2.0, shadow:6,  comp:"source-over" },
+      eraser:     { mode:"stroke", alpha: 1.0,          sizeMult: 1.3, shadow:0,  comp:"destination-out" }
     };
 
     const p = presets[type] || presets.pen;
     return { type, color, size, opacity, smooth, ...p };
   }
-
-  // pointer handling
-  let drawing = false;
-  let last = null;
-  let smoothLast = null;
 
   function canvasPoint(e){
     const rect = drawCanvas.getBoundingClientRect();
@@ -618,7 +630,6 @@ function startDrawingBoard(){
   }
 
   function drawStrokeSegment(a, b, s, pressure=1){
-    // pressure 0..1
     const size = (s.size * s.sizeMult) * (0.45 + pressure*0.8);
 
     ctx.save();
@@ -627,7 +638,6 @@ function startDrawingBoard(){
     ctx.strokeStyle = s.color;
     ctx.fillStyle = s.color;
 
-    // neon / watercolor glow-ish
     ctx.shadowBlur = s.shadow || 0;
     ctx.shadowColor = s.color;
 
@@ -636,7 +646,6 @@ function startDrawingBoard(){
       ctx.lineJoin = "round";
       ctx.lineWidth = size;
 
-      // pencil jitter: draw a couple offset strokes
       if (s.jitter) {
         for (let i=0;i<2;i++){
           const jx = (Math.random()-0.5) * s.jitter * 2;
@@ -675,7 +684,6 @@ function startDrawingBoard(){
     }
 
     if (s.mode === "stamp") {
-      // calligraphy stamp: oriented oval following direction
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const ang = Math.atan2(dy, dx);
@@ -704,56 +712,205 @@ function startDrawingBoard(){
   }
 
   function drawSymmetry(a,b,s,pressure){
-    // draw normal
     drawStrokeSegment(a,b,s,pressure);
-
     if (!symmetry) return;
 
-    // mirror over vertical center
     const cx = drawCanvas.width / 2;
     const ma = { x: cx + (cx - a.x), y: a.y };
     const mb = { x: cx + (cx - b.x), y: b.y };
     drawStrokeSegment(ma, mb, s, pressure);
   }
 
-  function onDown(e){
-    if (e.button !== undefined && e.button !== 0) return; // left click only
-    drawing = true;
+  // --------- BUCKET FILL ----------
+  function hexToRgb(hex){
+    const h = hex.replace("#","");
+    const n = parseInt(h.length===3 ? h.split("").map(c=>c+c).join("") : h, 16);
+    return { r:(n>>16)&255, g:(n>>8)&255, b:n&255, a:255 };
+  }
 
-    // save undo snapshot at stroke start
+  function colorAt(data, idx){
+    return { r:data[idx], g:data[idx+1], b:data[idx+2], a:data[idx+3] };
+  }
+
+  function setColor(data, idx, c){
+    data[idx]=c.r; data[idx+1]=c.g; data[idx+2]=c.b; data[idx+3]=255;
+  }
+
+  function distColor(c1,c2){
+    const dr=c1.r-c2.r, dg=c1.g-c2.g, db=c1.b-c2.b, da=c1.a-c2.a;
+    return Math.sqrt(dr*dr+dg*dg+db*db+da*da);
+  }
+
+  function bucketFill(x,y){
+    const tol = Number(fillTol?.value || 24);
+    const target = hexToRgb(penColor?.value || "#ff4fa5");
+
+    const img = ctx.getImageData(0,0,drawCanvas.width, drawCanvas.height);
+    const data = img.data;
+    const w = img.width;
+    const h = img.height;
+
+    const sx = Math.max(0, Math.min(w-1, Math.floor(x)));
+    const sy = Math.max(0, Math.min(h-1, Math.floor(y)));
+    const startIdx = (sy*w + sx) * 4;
+    const startCol = colorAt(data, startIdx);
+
+    // if already basically same color, do nothing
+    if (distColor(startCol, target) <= 1) return;
+
+    const visited = new Uint8Array(w*h);
+    const stack = [[sx, sy]];
+
+    while(stack.length){
+      const [cx, cy] = stack.pop();
+      const pos = cy*w + cx;
+      if (visited[pos]) continue;
+      visited[pos]=1;
+
+      const idx = pos*4;
+      const cur = colorAt(data, idx);
+
+      if (distColor(cur, startCol) > tol) continue;
+
+      setColor(data, idx, target);
+
+      if (cx>0) stack.push([cx-1, cy]);
+      if (cx<w-1) stack.push([cx+1, cy]);
+      if (cy>0) stack.push([cx, cy-1]);
+      if (cy<h-1) stack.push([cx, cy+1]);
+    }
+
+    ctx.putImageData(img,0,0);
+
+    // symmetry fill: mirror same point
+    if (symmetry){
+      const mx = (w/2) + ((w/2) - sx);
+      const my = sy;
+      // run a second fill using same start color at mirrored pixel
+      // (best effort — will fill mirrored region)
+      const img2 = ctx.getImageData(0,0,w,h);
+      const data2 = img2.data;
+
+      const msx = Math.max(0, Math.min(w-1, Math.floor(mx)));
+      const msy = Math.max(0, Math.min(h-1, Math.floor(my)));
+      const mStartIdx = (msy*w + msx) * 4;
+      const mStartCol = colorAt(data2, mStartIdx);
+      const visited2 = new Uint8Array(w*h);
+      const stack2 = [[msx, msy]];
+
+      while(stack2.length){
+        const [cx, cy] = stack2.pop();
+        const pos = cy*w + cx;
+        if (visited2[pos]) continue;
+        visited2[pos]=1;
+
+        const idx = pos*4;
+        const cur = colorAt(data2, idx);
+
+        if (distColor(cur, mStartCol) > tol) continue;
+        setColor(data2, idx, target);
+
+        if (cx>0) stack2.push([cx-1, cy]);
+        if (cx<w-1) stack2.push([cx+1, cy]);
+        if (cy>0) stack2.push([cx, cy-1]);
+        if (cy<h-1) stack2.push([cx, cy+1]);
+      }
+      ctx.putImageData(img2,0,0);
+    }
+  }
+
+  // --------- TEXT TOOL ----------
+  function fontFamilyFromSelect(v){
+    if (v === "serif") return "Georgia, 'Times New Roman', serif";
+    if (v === "mono") return "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace";
+    if (v === "cursive") return "'Comic Sans MS', 'Brush Script MT', cursive";
+    return "system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  }
+
+  function placeText(x,y){
+    const txt = (textValue?.value || "").trim();
+    if (!txt) return alert("Type something first 🙂");
+
     snapshot();
 
-    last = canvasPoint(e);
-    smoothLast = { ...last };
+    const size = Number(textSize?.value || 44);
+    const family = fontFamilyFromSelect(textFont?.value || "system");
+    const weight = boldOn ? "800" : "600";
 
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = Number(penOpacity?.value || 85) / 100;
+    ctx.fillStyle = penColor?.value || "#ff4fa5";
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left";
+    ctx.font = `${weight} ${size}px ${family}`;
+
+    // slight shadow for aesthetics (tiny)
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0,0,0,.15)";
+
+    ctx.fillText(txt, x, y);
+
+    if (symmetry){
+      const cx = drawCanvas.width / 2;
+      const mx = cx + (cx - x);
+      ctx.fillText(txt, mx, y);
+    }
+
+    ctx.restore();
+  }
+
+  // pointer drawing state (brush only)
+  let drawing = false;
+  let smoothLast = null;
+
+  function onDown(e){
+    const mode = toolMode?.value || "brush";
+
+    // BUCKET
+    if (mode === "bucket"){
+      snapshot();
+      const p = canvasPoint(e);
+      bucketFill(p.x, p.y);
+      updateUndoRedoButtons();
+      return;
+    }
+
+    // TEXT
+    if (mode === "text"){
+      const p = canvasPoint(e);
+      placeText(p.x, p.y);
+      updateUndoRedoButtons();
+      return;
+    }
+
+    // BRUSH
+    drawing = true;
+    snapshot();
+
+    const raw = canvasPoint(e);
+    smoothLast = { ...raw };
     drawCanvas.setPointerCapture?.(e.pointerId);
   }
 
   function onMove(e){
     if (!drawing) return;
-    const s = getSettings();
 
+    const s = getBrushSettings();
     const raw = canvasPoint(e);
-
-    // smoothing
     const smoothAmt = Math.min(0.9, Math.max(0, s.smooth));
     smoothLast = smoothPoint(smoothLast, raw, smoothAmt);
 
     const pressure = (e.pressure && e.pressure > 0) ? e.pressure : 1;
-
     drawSymmetry(smoothLast, raw, s, pressure);
-
-    last = raw;
   }
 
   function onUp(){
     drawing = false;
-    last = null;
     smoothLast = null;
     updateUndoRedoButtons();
   }
 
-  // pointer events cover mouse + touch + pen
   drawCanvas.addEventListener("pointerdown", (e)=>{ e.preventDefault(); onDown(e); });
   drawCanvas.addEventListener("pointermove", (e)=>{ e.preventDefault(); onMove(e); });
   window.addEventListener("pointerup", onUp);
