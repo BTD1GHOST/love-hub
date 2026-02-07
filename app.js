@@ -20,7 +20,6 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ✅ your real config here
 const firebaseConfig = {
   apiKey: "AIzaSyCCJdRcwZD9l83A02h1ysPI_VWTc1IGRSM",
   authDomain: "love-hub-d4f77.firebaseapp.com",
@@ -34,7 +33,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ---------- UI refs ----------
+// UI refs
 const authView = document.getElementById("authView");
 const pendingView = document.getElementById("pendingView");
 const appView = document.getElementById("appView");
@@ -51,7 +50,7 @@ const btnRefreshUsers = document.getElementById("btnRefreshUsers");
 const pendingList = document.getElementById("pendingList");
 const adminMsg = document.getElementById("adminMsg");
 
-// ---------- helpers ----------
+// helpers
 function show(view){
   authView.classList.add("hidden");
   pendingView.classList.add("hidden");
@@ -59,14 +58,13 @@ function show(view){
   btnSignOut.classList.add("hidden");
   view.classList.remove("hidden");
 }
-
 function setMsg(el, text, ok=false){
   if(!el) return;
   el.textContent = text || "";
   el.style.color = ok ? "#1f7a44" : "#8a1b3d";
 }
 
-// ---------- auth actions ----------
+// sign up
 btnSignUp.onclick = async () => {
   setMsg(authMsg, "");
   try{
@@ -88,6 +86,7 @@ btnSignUp.onclick = async () => {
   }
 };
 
+// sign in
 btnSignIn.onclick = async () => {
   setMsg(authMsg, "");
   try{
@@ -99,7 +98,7 @@ btnSignIn.onclick = async () => {
 
 btnSignOut.onclick = () => signOut(auth);
 
-// ---------- tabs ----------
+// tabs
 document.querySelectorAll(".tab").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
@@ -111,7 +110,7 @@ document.querySelectorAll(".tab").forEach(btn=>{
   });
 });
 
-// ---------- love counter (EST anchor) ----------
+// love counter
 function updateLoveDays(){
   const start = new Date("2024-06-18T00:00:00-04:00");
   const now = new Date();
@@ -123,13 +122,18 @@ function updateLoveDays(){
 setInterval(updateLoveDays, 10_000);
 updateLoveDays();
 
-// ---------- admin: load pending users ----------
+// admin: load pending users
 async function loadPendingUsers(){
   pendingList.innerHTML = "";
   setMsg(adminMsg, "Loading pending users…", true);
 
   try{
-    const q = query(collection(db, "users"), where("approved", "==", false), where("denied", "==", false));
+    const q = query(
+      collection(db, "users"),
+      where("approved", "==", false),
+      where("denied", "==", false)
+    );
+
     const snap = await getDocs(q);
 
     if(snap.empty){
@@ -141,6 +145,7 @@ async function loadPendingUsers(){
 
     snap.forEach(d=>{
       const u = d.data();
+
       const row = document.createElement("div");
       row.className = "item";
 
@@ -157,6 +162,7 @@ async function loadPendingUsers(){
         approveBtn.disabled = true;
         await updateDoc(doc(db, "users", d.id), {
           approved: true,
+          denied: false,
           approvedAt: serverTimestamp(),
           approvedBy: auth.currentUser?.uid || ""
         });
@@ -190,11 +196,9 @@ async function loadPendingUsers(){
   }
 }
 
-if(btnRefreshUsers){
-  btnRefreshUsers.onclick = loadPendingUsers;
-}
+btnRefreshUsers?.addEventListener("click", loadPendingUsers);
 
-// ---------- auth gate ----------
+// auth gate
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
     show(authView);
@@ -222,7 +226,6 @@ onAuthStateChanged(auth, async (user)=>{
 
   if(data.denied){
     show(pendingView);
-    setMsg(authMsg, "This account was denied.", false);
     return;
   }
 
@@ -231,10 +234,10 @@ onAuthStateChanged(auth, async (user)=>{
     return;
   }
 
-  // Approved:
+  // approved user
   show(appView);
 
-  // show/hide admin tab
+  // show admin tab if admin
   if(data.isAdmin){
     adminTabBtn?.classList.remove("hidden");
   } else {
