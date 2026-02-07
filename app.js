@@ -8,26 +8,23 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 import {
-  addDoc,
-  onSnapshot,
-  orderBy,
-  limit
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-
-import {
   getFirestore,
   doc,
   setDoc,
   getDoc,
-  serverTimestamp,
+  updateDoc,
+  addDoc,
   collection,
   query,
   where,
   getDocs,
-  updateDoc
+  onSnapshot,
+  orderBy,
+  limit,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// --- Firebase config (yours) ---
 const firebaseConfig = {
   apiKey: "AIzaSyCCJdRcwZD9l83A02h1ysPI_VWTc1IGRSM",
   authDomain: "love-hub-d4f77.firebaseapp.com",
@@ -41,7 +38,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// UI refs
+// --- Cloudflare Worker URL (yours) ---
+const WORKER_URL = "https://lovehub-api.brayplaster7.workers.dev";
+
+// ---------- UI refs ----------
 const authView = document.getElementById("authView");
 const pendingView = document.getElementById("pendingView");
 const appView = document.getElementById("appView");
@@ -58,7 +58,19 @@ const btnRefreshUsers = document.getElementById("btnRefreshUsers");
 const pendingList = document.getElementById("pendingList");
 const adminMsg = document.getElementById("adminMsg");
 
-// helpers
+// Chat UI
+const chatBox = document.getElementById("chatBox");
+const chatText = document.getElementById("chatText");
+const sendBtn = document.getElementById("sendBtn");
+const imgPick = document.getElementById("imgPick");
+const sendImgBtn = document.getElementById("sendImgBtn");
+
+// Modal UI
+const imgModal = document.getElementById("imgModal");
+const modalImg = document.getElementById("modalImg");
+const closeModal = document.getElementById("closeModal");
+
+// ---------- helpers ----------
 function show(view){
   authView.classList.add("hidden");
   pendingView.classList.add("hidden");
@@ -72,7 +84,31 @@ function setMsg(el, text, ok=false){
   el.style.color = ok ? "#1f7a44" : "#8a1b3d";
 }
 
-// sign up
+// ---------- Tabs ----------
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    btn.classList.add("active");
+
+    const tab = btn.dataset.tab;
+    document.querySelectorAll(".panel").forEach(p=>p.classList.add("hidden"));
+    document.getElementById(`tab-${tab}`).classList.remove("hidden");
+  });
+});
+
+// ---------- Love counter ----------
+function updateLoveDays(){
+  const start = new Date("2024-06-18T00:00:00-04:00");
+  const now = new Date();
+  const diffMs = now.getTime() - start.getTime();
+  const days = Math.floor(diffMs / (1000*60*60*24));
+  const el = document.getElementById("loveDays");
+  if (el) el.textContent = days.toLocaleString();
+}
+setInterval(updateLoveDays, 10_000);
+updateLoveDays();
+
+// ---------- Auth actions ----------
 btnSignUp.onclick = async () => {
   setMsg(authMsg, "");
   try{
@@ -94,7 +130,6 @@ btnSignUp.onclick = async () => {
   }
 };
 
-// sign in
 btnSignIn.onclick = async () => {
   setMsg(authMsg, "");
   try{
@@ -106,31 +141,7 @@ btnSignIn.onclick = async () => {
 
 btnSignOut.onclick = () => signOut(auth);
 
-// tabs
-document.querySelectorAll(".tab").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-    btn.classList.add("active");
-
-    const tab = btn.dataset.tab;
-    document.querySelectorAll(".panel").forEach(p=>p.classList.add("hidden"));
-    document.getElementById(`tab-${tab}`).classList.remove("hidden");
-  });
-});
-
-// love counter
-function updateLoveDays(){
-  const start = new Date("2024-06-18T00:00:00-04:00");
-  const now = new Date();
-  const diffMs = now.getTime() - start.getTime();
-  const days = Math.floor(diffMs / (1000*60*60*24));
-  const el = document.getElementById("loveDays");
-  if (el) el.textContent = days.toLocaleString();
-}
-setInterval(updateLoveDays, 10_000);
-updateLoveDays();
-
-// admin: load pending users
+// ---------- Admin: load pending users ----------
 async function loadPendingUsers(){
   pendingList.innerHTML = "";
   setMsg(adminMsg, "Loading pending users…", true);
@@ -203,10 +214,168 @@ async function loadPendingUsers(){
     setMsg(adminMsg, e.message);
   }
 }
-
 btnRefreshUsers?.addEventListener("click", loadPendingUsers);
 
-// auth gate
+// ---------- Image upload helper ----------
+async function uploadImageToR2(file) {
+  const token = await auth.currentUser.getIdToken();
+  const res = await fetch(`${WORKER_URL}/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "X-Filename": file.name,
+      "X-Content-Type": file.type || "application/octet-stream"
+    },
+    body: await file.arrayBuffer()
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  return await res.json(); // { key }
+}
+
+// ---------- Modal helpers ----------
+let currentBlobUrl = null;
+
+function openModalWithBlobUrl(url) {
+  currentBlobUrl = url;
+  modalImg.src = url;
+  imgModal.classList.remove("hidden");
+}
+
+function closeModalNow() {
+  imgModal.classList.add("hidden");
+  modalImg.src = "";
+  if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+  currentBlobUrl = null;
+}
+
+closeModal?.addEventListener("click", closeModalNow);
+imgModal?.addEventListener("click", (e) => {
+  if (e.target === imgModal) closeModalNow();
+});
+
+async function fetchImageBlobUrl(key) {
+  const token = await auth.currentUser.getIdToken();
+  const res = await fetch(`${WORKER_URL}/media/${encodeURIComponent(key)}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+// ---------- Chat (text + images) ----------
+function startChatRealtime(){
+  if(!chatBox) return;
+
+  // send text
+  sendBtn?.addEventListener("click", async () => {
+    const text = chatText.value.trim();
+    if(!text) return;
+
+    await addDoc(collection(db, "messages"), {
+      kind: "text",
+      text,
+      uid: auth.currentUser.uid,
+      email: auth.currentUser.email,
+      createdAt: serverTimestamp()
+    });
+
+    chatText.value = "";
+  });
+
+  // send image
+  sendImgBtn?.addEventListener("click", async () => {
+    if (!imgPick?.files?.length) return;
+    const file = imgPick.files[0];
+
+    if (file.size > 6 * 1024 * 1024) {
+      alert("Max 6MB per image.");
+      return;
+    }
+
+    sendImgBtn.disabled = true;
+
+    try {
+      const { key } = await uploadImageToR2(file);
+
+      await addDoc(collection(db, "messages"), {
+        kind: "image",
+        key,
+        filename: file.name,
+        contentType: file.type || "image/*",
+        viewOnce: true,
+        uid: auth.currentUser.uid,
+        email: auth.currentUser.email,
+        createdAt: serverTimestamp()
+      });
+
+      imgPick.value = "";
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      sendImgBtn.disabled = false;
+    }
+  });
+
+  // realtime feed
+  const q = query(collection(db, "messages"), orderBy("createdAt"), limit(200));
+
+  onSnapshot(q, (snap) => {
+    chatBox.innerHTML = "";
+
+    snap.forEach((d) => {
+      const m = d.data();
+      const mine = m.uid === auth.currentUser.uid;
+
+      const div = document.createElement("div");
+      div.className = "msgBubble " + (mine ? "msgMe" : "msgOther");
+
+      if (m.kind === "image") {
+        div.textContent = mine ? "📸 You sent a pic" : "📸 Tap to view pic";
+        div.classList.add("snap");
+
+        const viewDocRef = doc(db, "messages", d.id, "views", auth.currentUser.uid);
+
+        // check opened state
+        getDoc(viewDocRef).then((vs) => {
+          if (vs.exists()) {
+            div.classList.remove("snap");
+            div.classList.add("opened");
+            div.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
+          }
+        });
+
+        div.addEventListener("click", async () => {
+          const vs = await getDoc(viewDocRef);
+          if (vs.exists()) return;
+
+          try {
+            const blobUrl = await fetchImageBlobUrl(m.key);
+            openModalWithBlobUrl(blobUrl);
+
+            await setDoc(viewDocRef, { openedAt: serverTimestamp() });
+
+            div.classList.remove("snap");
+            div.classList.add("opened");
+            div.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
+          } catch (e) {
+            alert(e.message);
+          }
+        });
+
+      } else {
+        div.textContent = m.text || "";
+      }
+
+      chatBox.appendChild(div);
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+}
+
+// ---------- Auth gate ----------
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
     show(authView);
@@ -245,49 +414,13 @@ onAuthStateChanged(auth, async (user)=>{
   // approved user
   show(appView);
 
-  // show admin tab if admin
+  // admin tab
   if(data.isAdmin){
     adminTabBtn?.classList.remove("hidden");
   } else {
     adminTabBtn?.classList.add("hidden");
   }
+
+  // start realtime chat once approved
+  startChatRealtime();
 });
-
-// ----- CHAT -----
-const chatBox = document.getElementById("chatBox");
-const chatText = document.getElementById("chatText");
-const sendBtn = document.getElementById("sendBtn");
-
-if(sendBtn){
-  sendBtn.onclick = async () => {
-    const text = chatText.value.trim();
-    if(!text) return;
-
-    await addDoc(collection(db, "messages"), {
-      text,
-      uid: auth.currentUser.uid,
-      email: auth.currentUser.email,
-      createdAt: serverTimestamp()
-    });
-
-    chatText.value = "";
-  };
-
-  const q = query(
-    collection(db, "messages"),
-    orderBy("createdAt"),
-    limit(100)
-  );
-
-  onSnapshot(q, snap => {
-    chatBox.innerHTML = "";
-    snap.forEach(d => {
-      const m = d.data();
-      const div = document.createElement("div");
-      div.className = "msgBubble " + (m.uid === auth.currentUser.uid ? "msgMe" : "msgOther");
-      div.textContent = m.text;
-      chatBox.appendChild(div);
-    });
-    chatBox.scrollTop = chatBox.scrollHeight;
-  });
-}
