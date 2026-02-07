@@ -1,272 +1,250 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Our Little Hub 💗</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-
-  <!-- AUTH VIEW -->
-  <div id="authView" class="centerWrap">
-    <div class="card authCard">
-      <div class="brandRow">
-        <div class="logo">💗</div>
-        <div>
-          <div class="brandTitle">Our Little Hub</div>
-          <div class="brandSub">private + cute</div>
-        </div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">💗</div>
+      <div>
+        <div class="title">Our Little Hub</div>
+        <div class="subtitle">private + cute</div>
       </div>
-
-      <h2 class="h2">Welcome 💕</h2>
-      <p class="muted">Sign in or create an account. New accounts must be approved.</p>
-
-      <div class="row">
-        <input id="email" type="email" placeholder="Email" autocomplete="email" />
-        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
-      </div>
-
-      <div class="row">
-        <button id="btnSignIn" class="btn primary">Sign In</button>
-        <button id="btnSignUp" class="btn">Sign Up</button>
-      </div>
-
-      <div id="authMsg" class="msg"></div>
     </div>
-  </div>
+    <button id="btnSignOut" class="pill hidden">Sign out</button>
+  </header>
 
-  <!-- PENDING VIEW -->
-  <div id="pendingView" class="centerWrap hidden">
-    <div class="card authCard">
-      <h2 class="h2">Pending approval…</h2>
-      <p class="muted">Your account is waiting for approval by the admin 💗</p>
-      <button id="btnSignOut2" class="btn">Sign Out</button>
+  <!-- AUTH -->
+  <main id="authView" class="card">
+    <h2>Welcome 💕</h2>
+    <p class="muted">Sign in or create an account. New accounts must be approved.</p>
+
+    <div class="row">
+      <input id="email" class="input" type="email" placeholder="Email" autocomplete="email">
+      <input id="password" class="input" type="password" placeholder="Password" autocomplete="current-password">
     </div>
-  </div>
 
-  <!-- APP VIEW -->
-  <div id="appView" class="wrap hidden">
-    <header class="topbar">
-      <div class="brandRow">
-        <div class="logo">💗</div>
-        <div>
-          <div class="brandTitle">Our Little Hub</div>
-          <div class="brandSub">private + cute</div>
-        </div>
-      </div>
+    <div class="row">
+      <button id="btnSignIn" class="btn primary">Sign In</button>
+      <button id="btnSignUp" class="btn">Sign Up</button>
+    </div>
 
-      <button id="btnSignOut" class="btn small hidden">Sign Out</button>
-    </header>
+    <div id="authMsg" class="msg"></div>
+  </main>
 
-    <!-- Tabs -->
-    <div class="tabs">
+  <!-- PENDING -->
+  <main id="pendingView" class="card hidden">
+    <h2>Pending approval 🌸</h2>
+    <p class="muted">
+      Your account is created, but not approved yet.<br/>
+      Once approved, this page will unlock automatically.
+    </p>
+    <div class="heartbox">✨ 💗 ✨</div>
+  </main>
+
+  <!-- APP -->
+  <main id="appView" class="app hidden">
+    <nav class="tabs">
       <button class="tab active" data-tab="chat">💬 Chat</button>
-      <button class="tab" data-tab="saved">🧷 Saved</button>
+      <button class="tab" data-tab="saved">💾 Saved</button>
       <button class="tab" data-tab="draw">🎨 Draw</button>
-      <button class="tab" data-tab="love">💗 Love</button>
+      <button class="tab" data-tab="love">💞 Love</button>
       <button class="tab" data-tab="calendar">📅 Calendar</button>
-      <button class="tab adminOnly hidden" data-tab="admin">🛡 Admin</button>
-    </div>
+      <button class="tab adminOnly hidden" data-tab="admin">🛡️ Admin</button>
+    </nav>
 
-    <div class="card mainCard">
+    <!-- CHAT -->
+    <section class="panel" id="tab-chat">
+      <h3>Chat 💬</h3>
+      <div id="chatBox" class="chatBox"></div>
 
-      <!-- CHAT -->
-      <section id="tab-chat" class="panel">
-        <h2 class="h2">Chat 💬</h2>
-        <div id="chatBox" class="chatBox"></div>
+      <div class="chatInput">
+        <input id="chatText" class="input" placeholder="Type something cute… 💗" />
+        <button id="sendBtn" class="btn primary">Send</button>
 
-        <div class="chatControls">
-          <input id="chatText" type="text" placeholder="Message…" />
-          <button id="sendBtn" class="btn primary">Send</button>
+        <input id="imgPick" type="file" accept="image/*" class="filePick" />
+        <button id="sendImgBtn" class="btn">Send Pic 📸</button>
+      </div>
+
+      <p class="muted tiny">Tap a pic message to open it fullscreen.</p>
+    </section>
+
+    <!-- SAVED -->
+    <section class="panel hidden" id="tab-saved">
+      <div class="panelTop">
+        <div>
+          <h3>Saved 💾</h3>
+          <p class="muted">Pics you saved in chat show up here for both of you.</p>
         </div>
 
-        <div class="chatControls">
-          <input id="imgPick" type="file" accept="image/*" />
-          <button id="sendImgBtn" class="btn">Send Pic</button>
+        <div class="panelActions">
+          <button id="savedSelectBtn" class="btn">Select</button>
+          <button id="savedSelectAllBtn" class="btn hidden">Select All</button>
+          <button id="savedUnsaveBtn" class="btn primary hidden" disabled>Unsave</button>
         </div>
-      </section>
+      </div>
 
-      <!-- SAVED -->
-      <section id="tab-saved" class="panel hidden">
-        <div class="row spaceBetween">
-          <h2 class="h2">Saved 🧷</h2>
-          <div class="row">
-            <button id="savedSelectBtn" class="btn small">Select</button>
-            <button id="savedSelectAllBtn" class="btn small hidden">Select All</button>
-            <button id="savedUnsaveBtn" class="btn small primary hidden" disabled>Unsave</button>
+      <div id="savedGrid" class="savedGrid"></div>
+    </section>
+
+    <!-- DRAW -->
+    <section class="panel hidden" id="tab-draw">
+      <h3>Draw 🎨</h3>
+
+      <div class="drawBar">
+        <div class="drawRow">
+          <div class="drawGroup">
+            <label class="muted tiny">Tool</label>
+            <select id="toolMode" class="select">
+              <option value="brush">Brush</option>
+              <option value="bucket">Fill Bucket 🪣</option>
+              <option value="text">Text 🔤</option>
+            </select>
           </div>
-        </div>
-        <div id="savedGrid" class="grid"></div>
-      </section>
 
-      <!-- DRAW -->
-      <section id="tab-draw" class="panel hidden">
-        <div class="row spaceBetween">
-          <h2 class="h2">Draw 🎨</h2>
-          <button id="fsDrawBtn" class="btn small">⛶ Fullscreen</button>
-        </div>
-
-        <div class="drawToolbar">
-          <select id="toolMode" class="pill">
-            <option value="brush">Brush</option>
-            <option value="bucket">Fill Bucket</option>
-            <option value="text">Text</option>
-          </select>
-
-          <select id="brushType" class="pill">
-            <option value="pen">Pen</option>
-            <option value="pencil">Pencil</option>
-            <option value="marker">Marker</option>
-            <option value="highlighter">Highlighter</option>
-            <option value="spray">Spray</option>
-            <option value="calligraphy">Calligraphy</option>
-            <option value="neon">Neon</option>
-            <option value="watercolor">Watercolor</option>
-            <option value="eraser">Eraser</option>
-          </select>
-
-          <input id="penColor" class="pill" type="color" value="#ff4fa5" />
-          <label class="pillLabel">Size <input id="penSize" type="range" min="1" max="80" value="12"></label>
-          <label class="pillLabel">Opacity <input id="penOpacity" type="range" min="5" max="100" value="85"></label>
-          <label class="pillLabel">Smooth <input id="penSmooth" type="range" min="0" max="90" value="35"></label>
-
-          <label class="pillLabel">Fill Tol <input id="fillTol" type="range" min="0" max="120" value="24"></label>
-
-          <button id="undoBtn" class="btn small" disabled>Undo</button>
-          <button id="redoBtn" class="btn small" disabled>Redo</button>
-          <button id="symBtn" class="btn small">🪞 Symmetry: Off</button>
-          <button id="clearBtn" class="btn small">Clear</button>
-          <button id="saveDrawBtn" class="btn small primary">Save</button>
-        </div>
-
-        <div id="textControls" class="textControls" style="display:none">
-          <input id="textValue" class="pill" type="text" placeholder="Type text…" />
-          <select id="textFont" class="pill">
-            <option value="system">System</option>
-            <option value="serif">Serif</option>
-            <option value="mono">Mono</option>
-            <option value="cursive">Cursive</option>
-          </select>
-          <label class="pillLabel">Text Size <input id="textSize" type="range" min="12" max="140" value="44"></label>
-          <button id="textBold" class="btn small">B</button>
-          <span class="muted tiny">Tap canvas to place text</span>
-        </div>
-
-        <div id="canvasWrap" class="canvasWrap">
-          <canvas id="drawCanvas" width="1200" height="700"></canvas>
-        </div>
-
-        <h3 class="h3">Gallery</h3>
-        <div id="drawGallery" class="grid"></div>
-      </section>
-
-      <!-- LOVE -->
-      <section id="tab-love" class="panel hidden">
-        <div class="loveHero" id="loveHero">
-          <div class="loveTop">
-            <button id="loveSettingsBtn" class="btn small">⚙️</button>
-            <div class="loveTitle">Bray & Ali</div>
-            <button id="loveShareBtn" class="btn small">⤴️</button>
+          <div class="drawGroup">
+            <label class="muted tiny">Brush</label>
+            <select id="brushType" class="select">
+              <option value="pen">Pen</option>
+              <option value="pencil">Pencil</option>
+              <option value="marker">Marker</option>
+              <option value="highlighter">Highlighter</option>
+              <option value="spray">Spray</option>
+              <option value="calligraphy">Calligraphy</option>
+              <option value="neon">Neon</option>
+              <option value="watercolor">Watercolor-ish</option>
+              <option value="eraser">Eraser</option>
+            </select>
           </div>
-          <div class="loveBottom">
-            <div class="loveStart" id="loveStartPretty"></div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Color</label>
+            <input id="penColor" type="color" value="#ff4fa5"/>
+          </div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Size</label>
+            <input id="penSize" type="range" min="1" max="80" value="12"/>
+          </div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Opacity</label>
+            <input id="penOpacity" type="range" min="5" max="100" value="85"/>
+          </div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Smoothing</label>
+            <input id="penSmooth" type="range" min="0" max="90" value="35"/>
+          </div>
+
+          <div class="drawGroup">
+            <label class="muted tiny">Fill Tolerance</label>
+            <input id="fillTol" type="range" min="0" max="80" value="24"/>
           </div>
         </div>
 
-        <div class="loveCard">
-          <div class="loveBig">YOU HAVE BEEN TOGETHER FOR</div>
-          <div class="loveYmd" id="loveYMD"></div>
+        <div class="drawRow">
+          <div class="drawTextBox" id="textControls">
+            <label class="muted tiny">Text</label>
+            <input id="textValue" class="input small" placeholder="Type text…"/>
 
-          <div class="loveOther">IN OTHER WORDS</div>
-          <div class="loveStats">
-            <div class="stat"><div class="num" id="loveMonths">0</div><div class="lbl">months</div></div>
-            <div class="stat"><div class="num" id="loveWeeks">0</div><div class="lbl">weeks</div></div>
-            <div class="stat"><div class="num" id="loveDays2">0</div><div class="lbl">days</div></div>
-            <div class="stat"><div class="num" id="loveHours">0</div><div class="lbl">hours</div></div>
+            <label class="muted tiny">Font</label>
+            <select id="textFont" class="select">
+              <option value="system">System</option>
+              <option value="serif">Serif</option>
+              <option value="mono">Mono</option>
+              <option value="cursive">Cursive</option>
+            </select>
+
+            <label class="muted tiny">Size</label>
+            <input id="textSize" type="range" min="10" max="120" value="44"/>
+
+            <button id="textBold" class="btn">B</button>
+            <div class="muted tiny tip">Tap canvas to place text.</div>
           </div>
 
-          <div class="muted center tiny">Next anniversary in <span id="loveNextAnniv">0</span></div>
-          <input id="loveBgPick" type="file" accept="image/*" class="hidden" />
-        </div>
-      </section>
-
-      <!-- CALENDAR -->
-      <section id="tab-calendar" class="panel hidden">
-        <div class="row spaceBetween">
-          <h2 class="h2">Calendar 📅</h2>
-          <div class="row">
-            <button id="calPrev" class="btn small">←</button>
-            <div id="calMonthLabel" class="calMonthLabel"></div>
-            <button id="calNext" class="btn small">→</button>
-          </div>
-        </div>
-
-        <div class="calLayout">
-          <div class="calCard">
-            <div class="calGridHead">
-              <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
-            </div>
-            <div id="calGrid" class="calGrid"></div>
-          </div>
-
-          <div class="calSide">
-            <div class="calCard">
-              <h3 class="h3">Add event</h3>
-              <div class="col">
-                <input id="evTitle" class="pill" type="text" placeholder="Title (date night 💗)" />
-                <input id="evStart" class="pill" type="datetime-local" />
-                <input id="evEnd" class="pill" type="datetime-local" />
-                <label class="row tiny muted"><input id="evAllDay" type="checkbox" /> All day</label>
-                <textarea id="evNotes" class="pill" rows="3" placeholder="Notes…"></textarea>
-                <button id="evAddBtn" class="btn primary">Add Event</button>
-                <div id="calMsg" class="msg"></div>
-              </div>
-            </div>
-
-            <div class="calCard">
-              <h3 class="h3">Events for <span id="calSelectedLabel"></span></h3>
-              <div id="calDayList" class="calDayList"></div>
-            </div>
+          <div class="drawBtns">
+            <button id="undoBtn" class="btn">↩ Undo</button>
+            <button id="redoBtn" class="btn">↪ Redo</button>
+            <button id="symBtn" class="btn">🪞 Symmetry: Off</button>
+            <button id="clearBtn" class="btn">Clear</button>
+            <button id="fsDrawBtn" class="btn">⛶ Fullscreen</button>
+            <button id="saveDrawBtn" class="btn primary">Save Drawing 💾</button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <!-- ADMIN -->
-      <section id="tab-admin" class="panel hidden">
-        <div class="row spaceBetween">
-          <h2 class="h2">Admin 🛡</h2>
-          <div class="row">
-            <button id="btnRefreshUsers" class="btn small">Refresh pending</button>
-            <button id="btnClearChat" class="btn small primary">Clear Chat</button>
-          </div>
+      <div id="canvasWrap" class="canvasWrap">
+        <canvas id="drawCanvas" width="1200" height="700"></canvas>
+      </div>
+
+      <p class="muted tiny">
+        Tool tips: Bucket fills an area based on tolerance. Text: type then tap canvas. 💗
+      </p>
+
+      <h4 class="mt">Gallery 💗</h4>
+      <div id="drawGallery" class="savedGrid"></div>
+    </section>
+
+    <!-- LOVE -->
+    <section class="panel hidden" id="tab-love">
+      <h3>Love 💞</h3>
+      <div class="loveCard">
+        <div class="loveBig" id="loveDays">—</div>
+        <div class="muted">days since June 18, 2024 (EST)</div>
+      </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section class="panel hidden" id="tab-calendar">
+      <h3>Calendar 📅</h3>
+      <p class="muted">Next we’ll add events (EST) that you both can see.</p>
+    </section>
+
+    <!-- ADMIN -->
+    <section class="panel hidden" id="tab-admin">
+      <h3>Admin 🛡️</h3>
+      <p class="muted">Approve/deny accounts + manage users.</p>
+
+      <div class="adminBox">
+        <div class="adminActions">
+          <button id="btnRefreshUsers" class="btn">Refresh pending</button>
+          <button id="btnClearChat" class="btn primary">Clear Chat 🧹</button>
         </div>
 
         <div id="adminMsg" class="msg"></div>
 
-        <h3 class="h3">Pending approvals</h3>
+        <h4 class="mt">Pending approvals</h4>
         <div id="pendingList" class="list"></div>
 
-        <h3 class="h3">All accounts</h3>
+        <h4 class="mt">All accounts</h4>
         <div id="accountsList" class="list"></div>
-      </section>
+      </div>
+    </section>
+  </main>
 
+  <!-- FULLSCREEN IMAGE VIEWER -->
+  <div id="imgModal" class="fs hidden">
+    <div class="fsTop">
+      <button id="closeModal" class="fsBtn">✕</button>
+      <div class="fsTitle" id="fsTitle">Photo</div>
+      <div class="fsTopRight">
+        <button id="saveChatBtn" class="fsBtn">💾 Save</button>
+        <button id="saveDeviceBtn" class="fsBtn primary">⬇️ Download</button>
+      </div>
     </div>
+
+    <div class="fsBody">
+      <img id="modalImg" class="fsImg" alt="photo"/>
+    </div>
+
+    <div class="fsHint muted tiny">Saved adds it to the Saved tab for both of you 💗</div>
   </div>
 
-  <!-- IMAGE MODAL -->
-  <div id="imgModal" class="modal hidden">
-    <div class="modalTop">
-      <div id="fsTitle" class="modalTitle">Photo</div>
-      <button id="closeModal" class="btn small">✕</button>
-    </div>
-    <img id="modalImg" class="modalImg" alt="full" />
-    <div class="modalActions">
-      <button id="saveChatBtn" class="btn">💾 Save</button>
-      <button id="saveDeviceBtn" class="btn primary">⬇️ Download</button>
-    </div>
-  </div>
-
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
