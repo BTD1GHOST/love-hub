@@ -192,17 +192,84 @@
 
     <!-- LOVE -->
     <section class="panel hidden" id="tab-love">
-      <h3>Love 💞</h3>
-      <div class="loveCard">
-        <div class="loveBig" id="loveDays">—</div>
-        <div class="muted">days since June 18, 2024 (EST)</div>
+      <div class="loveHero" id="loveHero">
+        <div class="loveHeroTop">
+          <div>
+            <div class="loveHeroTitle">Our Love 💗</div>
+            <div class="loveHeroSub">Since <span id="loveStartPretty">June 18, 2024</span></div>
+          </div>
+
+          <div class="loveHeroBtns">
+            <input id="loveBgPick" type="file" accept="image/*" class="hidden"/>
+            <button id="loveSettingsBtn" class="btn">Change Background</button>
+            <button id="loveShareBtn" class="btn primary">Share</button>
+          </div>
+        </div>
+
+        <div class="loveStats">
+          <div class="loveStat">
+            <div class="loveStatBig" id="loveYMD">—</div>
+            <div class="muted tiny">together (years / months / days)</div>
+          </div>
+
+          <div class="loveGrid">
+            <div class="loveMini">
+              <div class="loveMiniNum" id="loveMonths">—</div>
+              <div class="muted tiny">months</div>
+            </div>
+            <div class="loveMini">
+              <div class="loveMiniNum" id="loveWeeks">—</div>
+              <div class="muted tiny">weeks</div>
+            </div>
+            <div class="loveMini">
+              <div class="loveMiniNum" id="loveDays2">—</div>
+              <div class="muted tiny">days</div>
+            </div>
+            <div class="loveMini">
+              <div class="loveMiniNum" id="loveHours">—</div>
+              <div class="muted tiny">hours</div>
+            </div>
+          </div>
+
+          <div class="loveNext">
+            <div class="loveNextBig" id="loveNextAnniv">—</div>
+            <div class="muted tiny">until next anniversary</div>
+          </div>
+        </div>
       </div>
     </section>
 
     <!-- CALENDAR -->
     <section class="panel hidden" id="tab-calendar">
-      <h3>Calendar 📅</h3>
-      <p class="muted">Next we’ll add events (EST) that you both can see.</p>
+      <div class="panelTop">
+        <div>
+          <h3>Calendar 📅</h3>
+          <p class="muted tiny">Events are saved for both of you. Times use your device timezone (EST/EDT).</p>
+        </div>
+      </div>
+
+      <div class="calForm">
+        <input id="calTitle" class="input" placeholder="Event title (date night, appointment, surprise 💗)" />
+        <div class="calRow">
+          <div class="calGroup">
+            <label class="muted tiny">Start</label>
+            <input id="calWhen" class="input" type="datetime-local"/>
+          </div>
+          <div class="calGroup">
+            <label class="muted tiny">End (optional)</label>
+            <input id="calEnd" class="input" type="datetime-local"/>
+          </div>
+        </div>
+        <textarea id="calNotes" class="input calNotesBox" rows="3" placeholder="Notes (optional)…"></textarea>
+
+        <div class="calActions">
+          <button id="calAddBtn" class="btn primary">Add Event 💗</button>
+          <div id="calMsg" class="msg"></div>
+        </div>
+      </div>
+
+      <div class="mt"></div>
+      <div id="calList" class="calList"></div>
     </section>
 
     <!-- ADMIN -->
