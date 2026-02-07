@@ -50,6 +50,7 @@
   <main id="appView" class="app hidden">
     <nav class="tabs">
       <button class="tab active" data-tab="chat">💬 Chat</button>
+      <button class="tab" data-tab="saved">💾 Saved</button>
       <button class="tab" data-tab="draw">🎨 Draw</button>
       <button class="tab" data-tab="love">💞 Love</button>
       <button class="tab" data-tab="calendar">📅 Calendar</button>
@@ -69,6 +70,15 @@
         <input id="imgPick" type="file" accept="image/*" class="filePick" />
         <button id="sendImgBtn" class="btn">Send Pic 📸</button>
       </div>
+
+      <p class="muted tiny">Tip: hold/right-click a pic bubble to save.</p>
+    </section>
+
+    <!-- SAVED -->
+    <section class="panel hidden" id="tab-saved">
+      <h3>Saved 💾</h3>
+      <p class="muted">Pics you saved in chat show up here for both of you.</p>
+      <div id="savedGrid" class="savedGrid"></div>
     </section>
 
     <!-- DRAW (later) -->
@@ -109,8 +119,18 @@
   <div id="imgModal" class="modal hidden">
     <div class="modalInner">
       <img id="modalImg" class="modalImg" />
-      <button id="closeModal" class="btn primary">Close</button>
+      <div class="row">
+        <button id="closeModal" class="btn primary">Close</button>
+      </div>
+      <p class="muted tiny">Hold/right-click the image for options.</p>
     </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div id="ctxMenu" class="ctx hidden">
+    <button id="ctxSaveChat" class="ctxBtn">💾 Save in Chat</button>
+    <button id="ctxSaveDevice" class="ctxBtn">⬇️ Save to Device</button>
+    <button id="ctxCancel" class="ctxBtn danger">Cancel</button>
   </div>
 
   <script type="module" src="app.js"></script>
