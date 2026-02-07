@@ -46,10 +46,49 @@
     <div class="heartbox">✨ 💗 ✨</div>
   </main>
 
-  <!-- APP (locked until approved) -->
-  <main id="appView" class="card hidden">
-    <h2>Approved ✅</h2>
-    <p class="muted">Step 3 will add your tabs (Chat / Draw / Love / Calendar / Admin).</p>
+  <!-- APP -->
+  <main id="appView" class="app hidden">
+    <nav class="tabs">
+      <button class="tab active" data-tab="chat">💬 Chat</button>
+      <button class="tab" data-tab="draw">🎨 Draw</button>
+      <button class="tab" data-tab="love">💞 Love</button>
+      <button class="tab" data-tab="calendar">📅 Calendar</button>
+      <button class="tab adminOnly hidden" data-tab="admin">🛡️ Admin</button>
+    </nav>
+
+    <section class="panel" id="tab-chat">
+      <h3>Chat 💬</h3>
+      <p class="muted">Step 4 will add real chat + images.</p>
+    </section>
+
+    <section class="panel hidden" id="tab-draw">
+      <h3>Draw 🎨</h3>
+      <p class="muted">Step 5 will add drawing + save to R2.</p>
+    </section>
+
+    <section class="panel hidden" id="tab-love">
+      <h3>Love 💞</h3>
+      <div class="loveCard">
+        <div class="loveBig" id="loveDays">—</div>
+        <div class="muted">days since June 18, 2024 (EST)</div>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="tab-calendar">
+      <h3>Calendar 📅</h3>
+      <p class="muted">Step 6 will add shared events (EST).</p>
+    </section>
+
+    <section class="panel hidden" id="tab-admin">
+      <h3>Admin 🛡️</h3>
+      <p class="muted">Approve accounts here.</p>
+
+      <div class="adminBox">
+        <button id="btnRefreshUsers" class="btn">Refresh list</button>
+        <div id="adminMsg" class="msg"></div>
+        <div id="pendingList" class="list"></div>
+      </div>
+    </section>
   </main>
 
   <script type="module" src="app.js"></script>
