@@ -1,17 +1,14 @@
 // ===============================
-// OUR LITTLE HUB — app.js (FULL REWRITE FINAL)
-// ✅ Username + Password (no real email)
-// ✅ No early snapshot popups / no console spam
-// ✅ Start ALL Firestore listeners ONLY after:
-//    - signed in
-//    - user doc exists
-//    - approved && not denied
-// ✅ Chat (tap anywhere on pic message opens fullscreen)
-// ✅ Fullscreen image viewer + Save to Saved tab + Download
-// ✅ Saved tab: Select / Select All / Unsave (bulk)
-// ✅ Draw: advanced brushes + bucket + text + symmetry + undo/redo + fullscreen + save + gallery
-// ✅ Admin: pending approvals + all accounts + set display name + block/unblock + delete access doc + clear chat
-// ✅ Calendar: shared events list + add/delete
+// OUR LITTLE HUB — app.js (FULL FINAL)
+// Username+Password (no email UI)
+// Pending approval screen
+// Admin approvals + accounts + clear chat
+// Chat text + snap-like images (tap bubble to open)
+// Fullscreen viewer + Save (to Saved tab) + Download
+// Saved tab: Select / Select All / Unsave
+// Draw tab: advanced brushes + bucket + text + undo/redo + symmetry + fullscreen + save to shared gallery
+// Calendar tab: add/edit/delete shared events (EST-safe)
+// All realtime listeners start ONLY after auth + approved (no race-condition popups)
 // ===============================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -47,13 +44,13 @@ import {
 const firebaseConfig = {
   apiKey: "AIzaSyCCJdRcwZD9l83A02h1ysPI_VWTc1IGRSM",
   authDomain: "love-hub-d4f77.firebaseapp.com",
-  projectId: "love-hub-d4f77",
+  projectId: "love-hub-d4f77.firebaseapp.com" ? "love-hub-d4f77" : "love-hub-d4f77",
   storageBucket: "love-hub-d4f77.firebasestorage.app",
   messagingSenderId: "189429669803",
   appId: "1:189429669803:web:e2e6cb2488d234e1fafcee"
 };
 
-// your Cloudflare Worker base URL
+// Cloudflare Worker base URL (R2 gateway + auth checks)
 const WORKER_URL = "https://lovehub-api.brayplaster7.workers.dev";
 
 const app = initializeApp(firebaseConfig);
@@ -66,7 +63,9 @@ const db = getFirestore(app);
 const authView = document.getElementById("authView");
 const pendingView = document.getElementById("pendingView");
 const appView = document.getElementById("appView");
+
 const btnSignOut = document.getElementById("btnSignOut");
+const pendingSignOut = document.getElementById("pendingSignOut");
 
 const usernameEl = document.getElementById("username");
 const passEl = document.getElementById("password");
@@ -123,7 +122,7 @@ const fsDrawBtn = document.getElementById("fsDrawBtn");
 const saveDrawBtn = document.getElementById("saveDrawBtn");
 const drawGallery = document.getElementById("drawGallery");
 
-// Text controls
+// Text tool controls
 const textControls = document.getElementById("textControls");
 const textValue = document.getElementById("textValue");
 const textFont = document.getElementById("textFont");
@@ -140,7 +139,6 @@ function show(view) {
   authView?.classList.add("hidden");
   pendingView?.classList.add("hidden");
   appView?.classList.add("hidden");
-  btnSignOut?.classList.add("hidden");
   view?.classList.remove("hidden");
 }
 
@@ -162,30 +160,95 @@ function esc(s = "") {
 
 function normalizeUsername(raw) {
   const u = (raw || "").trim().toLowerCase();
+  // 3–20 chars, letters/numbers/._-
   if (!/^[a-z0-9._-]{3,20}$/.test(u)) {
-    throw new Error("Username must be 3–20 characters (letters/numbers/._-).");
+    throw new Error("Username must be 3–20 chars (letters/numbers/._-).");
   }
   return u;
 }
 
+// Firebase Auth requires an email format, so we map username->fake email.
 function usernameToEmail(username) {
-  // Fake email for Firebase Auth (still email/password under the hood)
   return `${username}@lovehub.local`;
 }
 
-// Safe snapshot wrapper: no popups, no spam
+// Snapshot wrapper: no user alerts; just warn
 function safeOnSnapshot(q, onOk, label = "snapshot") {
   return onSnapshot(
     q,
     (snap) => onOk(snap),
-    (err) => {
-      console.warn(`${label} snapshot error (safe to ignore)`, err?.code || err?.message || err);
-    }
+    (err) => console.warn(`${label} snapshot error (safe)`, err?.code || err?.message || err)
   );
 }
 
+function requireUser() {
+  if (!auth.currentUser) throw new Error("Not signed in.");
+  return auth.currentUser;
+}
+
 /* ===============================
-   TABS
+   SIGN OUT BUTTONS
+   =============================== */
+btnSignOut?.addEventListener("click", () => signOut(auth));
+pendingSignOut?.addEventListener("click", () => signOut(auth));
+
+function showSignOut(yes) {
+  if (!btnSignOut) return;
+  if (yes) btnSignOut.classList.remove("hidden");
+  else btnSignOut.classList.add("hidden");
+}
+
+/* ===============================
+   AUTH (username + password)
+   =============================== */
+btnSignUp?.addEventListener("click", async () => {
+  setMsg(authMsg, "");
+  try {
+    const username = normalizeUsername(usernameEl?.value || "");
+    const password = passEl?.value || "";
+    if (password.length < 6) throw new Error("Password must be at least 6 characters.");
+
+    const email = usernameToEmail(username);
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+    // Create user profile doc (pending by default)
+    await setDoc(doc(db, "users", cred.user.uid), {
+      username,
+      usernameLower: username,
+      approved: false,
+      denied: false,
+      isAdmin: false,
+      nickname: "", // optional display name
+      createdAt: serverTimestamp()
+    });
+
+    // Immediately show pending view (you asked for this)
+    showSignOut(true);
+    show(pendingView);
+
+    // Clear inputs
+    if (usernameEl) usernameEl.value = "";
+    if (passEl) passEl.value = "";
+
+  } catch (e) {
+    setMsg(authMsg, e?.message || String(e));
+  }
+});
+
+btnSignIn?.addEventListener("click", async () => {
+  setMsg(authMsg, "");
+  try {
+    const username = normalizeUsername(usernameEl?.value || "");
+    const password = passEl?.value || "";
+    const email = usernameToEmail(username);
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    setMsg(authMsg, e?.message || String(e));
+  }
+});
+
+/* ===============================
+   TAB SWITCHING
    =============================== */
 document.querySelectorAll(".tab").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -198,51 +261,7 @@ document.querySelectorAll(".tab").forEach((btn) => {
 });
 
 /* ===============================
-   AUTH ACTIONS
-   =============================== */
-btnSignOut?.addEventListener("click", () => signOut(auth));
-
-btnSignUp?.addEventListener("click", async () => {
-  setMsg(authMsg, "");
-  try {
-    const username = normalizeUsername(usernameEl?.value || "");
-    const password = passEl?.value || "";
-    if (password.length < 6) throw new Error("Password must be at least 6 characters.");
-
-    const fakeEmail = usernameToEmail(username);
-    const cred = await createUserWithEmailAndPassword(auth, fakeEmail, password);
-
-    await setDoc(doc(db, "users", cred.user.uid), {
-      username,
-      usernameLower: username,
-      approved: false,
-      denied: false,
-      isAdmin: false,
-      nickname: "",
-      createdAt: serverTimestamp()
-    });
-
-    setMsg(authMsg, "Account created! Waiting for approval 💗", true);
-  } catch (e) {
-    setMsg(authMsg, e?.message || String(e));
-  }
-});
-
-btnSignIn?.addEventListener("click", async () => {
-  setMsg(authMsg, "");
-  try {
-    const username = normalizeUsername(usernameEl?.value || "");
-    const password = passEl?.value || "";
-    const fakeEmail = usernameToEmail(username);
-
-    await signInWithEmailAndPassword(auth, fakeEmail, password);
-  } catch (e) {
-    setMsg(authMsg, e?.message || String(e));
-  }
-});
-
-/* ===============================
-   USER DISPLAY NAME MAP
+   USER NAME MAP (for chat labels)
    =============================== */
 let uidToName = {};
 let unsubUsers = null;
@@ -262,12 +281,13 @@ function startUsersRealtime() {
     "users"
   );
 }
+
 function displayNameFor(uid) {
-  return uidToName[uid] || uid || "Someone";
+  return uidToName[uid] || "Someone";
 }
 
 /* ===============================
-   ADMIN: pending approvals
+   ADMIN — approvals + accounts + clear chat
    =============================== */
 async function loadPendingUsers() {
   if (!pendingList) return;
@@ -324,8 +344,8 @@ async function loadPendingUsers() {
         await updateDoc(doc(db, "users", d.id), {
           denied: true,
           approved: false,
-          approvedAt: serverTimestamp(),
-          approvedBy: auth.currentUser?.uid || ""
+          deniedAt: serverTimestamp(),
+          deniedBy: auth.currentUser?.uid || ""
         });
         loadPendingUsers();
       };
@@ -340,97 +360,84 @@ async function loadPendingUsers() {
     setMsg(adminMsg, e?.message || String(e));
   }
 }
+
 btnRefreshUsers?.addEventListener("click", loadPendingUsers);
 
-/* ===============================
-   ADMIN: All accounts realtime
-   =============================== */
 let unsubAccounts = null;
 
 function startAccountsRealtime(isAdmin) {
-  if (!accountsList) return;
   unsubAccounts?.();
-  if (!isAdmin) return;
+  if (!isAdmin || !accountsList) return;
 
   const qAll = query(collection(db, "users"), orderBy("createdAt"), limit(500));
+  unsubAccounts = safeOnSnapshot(qAll, (snap) => {
+    accountsList.innerHTML = "";
 
-  unsubAccounts = safeOnSnapshot(
-    qAll,
-    (snap) => {
-      accountsList.innerHTML = "";
+    snap.forEach((d) => {
+      const u = d.data() || {};
+      const uid = d.id;
 
-      snap.forEach((d) => {
-        const u = d.data() || {};
-        const uid = d.id;
+      const status = u.denied ? "Denied" : (u.approved ? "Approved" : "Pending");
+      const name = (u.nickname?.trim() || u.username || uid);
+      const isMe = auth.currentUser?.uid === uid;
 
-        const status = u.denied ? "Denied" : (u.approved ? "Approved" : "Pending");
-        const name = (u.nickname?.trim() || u.username || "");
-        const isMe = auth.currentUser?.uid === uid;
+      const row = document.createElement("div");
+      row.className = "item";
 
-        const row = document.createElement("div");
-        row.className = "item";
+      const left = document.createElement("div");
+      left.innerHTML = `
+        <div><b>${esc(name)}</b> <small>(${esc(status)})</small></div>
+        <small>${esc(uid)}</small>
+      `;
 
-        const left = document.createElement("div");
-        left.innerHTML = `
-          <div><b>${esc(name || uid)}</b> <small>(${esc(status)})</small></div>
-          <small>${esc(uid)}</small>
-        `;
+      const actions = document.createElement("div");
+      actions.className = "actions";
 
-        const actions = document.createElement("div");
-        actions.className = "actions";
+      const nickBtn = document.createElement("button");
+      nickBtn.className = "btn";
+      nickBtn.textContent = "Set Display Name";
+      nickBtn.onclick = async () => {
+        const next = prompt("Display name for everyone to see:", u.nickname || "");
+        if (next === null) return;
+        await updateDoc(doc(db, "users", uid), { nickname: String(next).trim() });
+      };
 
-        const nickBtn = document.createElement("button");
-        nickBtn.className = "btn";
-        nickBtn.textContent = "Set Display Name";
-        nickBtn.onclick = async () => {
-          const current = u.nickname || "";
-          const next = prompt("Display name for everyone to see:", current);
-          if (next === null) return;
-          await updateDoc(doc(db, "users", uid), { nickname: String(next).trim() });
-        };
+      const blockBtn = document.createElement("button");
+      blockBtn.className = "btn";
+      blockBtn.textContent = u.denied ? "Unblock" : "Block";
+      blockBtn.onclick = async () => {
+        if (!confirm(`${u.denied ? "Unblock" : "Block"} this user?`)) return;
+        await updateDoc(doc(db, "users", uid), {
+          denied: !u.denied,
+          approved: u.denied ? true : false
+        });
+      };
 
-        const blockBtn = document.createElement("button");
-        blockBtn.className = "btn";
-        blockBtn.textContent = u.denied ? "Unblock" : "Block";
-        blockBtn.onclick = async () => {
-          if (!confirm(`${u.denied ? "Unblock" : "Block"} this user?`)) return;
-          await updateDoc(doc(db, "users", uid), {
-            denied: !u.denied,
-            approved: u.denied ? true : false
-          });
-        };
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn primary";
+      delBtn.textContent = "Delete Access";
+      delBtn.onclick = async () => {
+        if (isMe) return;
+        if (!confirm("This deletes their user doc (blocks them). Continue?")) return;
+        try { await updateDoc(doc(db, "users", uid), { denied: true, approved: false }); } catch {}
+        await deleteDoc(doc(db, "users", uid));
+      };
+      if (isMe) {
+        delBtn.disabled = true;
+        delBtn.title = "Can't delete your own account doc.";
+      }
 
-        const deleteBtn = document.createElement("button");
-        deleteBtn.className = "btn primary";
-        deleteBtn.textContent = "Delete Access";
-        deleteBtn.onclick = async () => {
-          if (isMe) return;
-          if (!confirm("This will delete their user profile doc (and block them). Continue?")) return;
+      actions.appendChild(nickBtn);
+      actions.appendChild(blockBtn);
+      actions.appendChild(delBtn);
 
-          try { await updateDoc(doc(db, "users", uid), { denied: true, approved: false }); } catch {}
-          await deleteDoc(doc(db, "users", uid));
-        };
-
-        if (isMe) {
-          deleteBtn.disabled = true;
-          deleteBtn.title = "Can't delete your own account doc.";
-        }
-
-        actions.appendChild(nickBtn);
-        actions.appendChild(blockBtn);
-        actions.appendChild(deleteBtn);
-        row.appendChild(left);
-        row.appendChild(actions);
-        accountsList.appendChild(row);
-      });
-    },
-    "accounts"
-  );
+      row.appendChild(left);
+      row.appendChild(actions);
+      accountsList.appendChild(row);
+    });
+  }, "accounts");
 }
 
-/* ===============================
-   ADMIN: Clear chat
-   =============================== */
 async function clearChat(isAdmin) {
   if (!isAdmin) return;
   if (!confirm("Clear ALL chat messages for everyone?")) return;
@@ -441,10 +448,12 @@ async function clearChat(isAdmin) {
   try {
     const snap = await getDocs(collection(db, "messages"));
     let count = 0;
+
     for (const d of snap.docs) {
       await deleteDoc(doc(db, "messages", d.id));
       count++;
     }
+
     setMsg(adminMsg, `Chat cleared ✅ (${count} deleted)`, true);
   } catch (e) {
     setMsg(adminMsg, e?.message || String(e));
@@ -452,15 +461,18 @@ async function clearChat(isAdmin) {
     btnClearChat && (btnClearChat.disabled = false);
   }
 }
+
 btnClearChat?.addEventListener("click", async () => {
   await clearChat(!!window.__isAdmin);
 });
 
 /* ===============================
-   R2 (via Worker) upload/fetch
+   R2 WORKER HELPERS
    =============================== */
 async function uploadImageToR2(file) {
-  const token = await auth.currentUser.getIdToken();
+  const user = requireUser();
+  const token = await user.getIdToken();
+
   const res = await fetch(`${WORKER_URL}/upload`, {
     method: "POST",
     headers: {
@@ -470,15 +482,19 @@ async function uploadImageToR2(file) {
     },
     body: await file.arrayBuffer()
   });
+
   if (!res.ok) throw new Error(await res.text());
   return await res.json(); // { key }
 }
 
 async function fetchImageBlob(key) {
-  const token = await auth.currentUser.getIdToken();
+  const user = requireUser();
+  const token = await user.getIdToken();
+
   const res = await fetch(`${WORKER_URL}/media/${encodeURIComponent(key)}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
+
   if (!res.ok) throw new Error(await res.text());
   return await res.blob();
 }
@@ -548,7 +564,7 @@ saveChatBtn?.addEventListener("click", async () => {
     if (saveChatBtn) saveChatBtn.textContent = "✅ Saved";
     setTimeout(() => { if (saveChatBtn) saveChatBtn.textContent = "💾 Save"; }, 1200);
   } catch (e) {
-    console.warn("save failed", e?.code || e?.message || e);
+    console.warn("save->saved failed", e?.code || e?.message || e);
   }
 });
 
@@ -563,15 +579,14 @@ saveDeviceBtn?.addEventListener("click", async () => {
 });
 
 /* ===============================
-   SAVED TAB (select + unsave)
+   SAVED TAB: select + unsave
    =============================== */
+let unsubSaved = null;
 let savedSelectMode = false;
 let selectedSavedIds = new Set();
 let lastSavedDocs = [];
-let unsubSaved = null;
-let savedHandlersBound = false;
 
-function updateSavedToolbar() {
+function syncSavedToolbar() {
   if (!savedSelectBtn) return;
 
   if (!savedSelectMode) {
@@ -579,7 +594,6 @@ function updateSavedToolbar() {
     savedSelectAllBtn?.classList.add("hidden");
     savedUnsaveBtn?.classList.add("hidden");
     if (savedUnsaveBtn) savedUnsaveBtn.disabled = true;
-    selectedSavedIds.clear();
   } else {
     savedSelectBtn.textContent = "Done";
     savedSelectAllBtn?.classList.remove("hidden");
@@ -588,43 +602,36 @@ function updateSavedToolbar() {
   }
 }
 
-function bindSavedHandlersOnce() {
-  if (savedHandlersBound) return;
-  savedHandlersBound = true;
+savedSelectBtn?.addEventListener("click", () => {
+  savedSelectMode = !savedSelectMode;
+  if (!savedSelectMode) selectedSavedIds.clear();
+  syncSavedToolbar();
+  renderSavedGrid(lastSavedDocs);
+});
 
-  savedSelectBtn?.addEventListener("click", () => {
-    savedSelectMode = !savedSelectMode;
-    if (!savedSelectMode) selectedSavedIds.clear();
-    updateSavedToolbar();
-    renderSavedGrid(lastSavedDocs);
-  });
+savedSelectAllBtn?.addEventListener("click", () => {
+  if (!savedSelectMode) return;
+  if (selectedSavedIds.size === lastSavedDocs.length) selectedSavedIds.clear();
+  else selectedSavedIds = new Set(lastSavedDocs.map((d) => d.id));
+  syncSavedToolbar();
+  renderSavedGrid(lastSavedDocs);
+});
 
-  savedSelectAllBtn?.addEventListener("click", () => {
-    if (!savedSelectMode) return;
-    if (selectedSavedIds.size === lastSavedDocs.length) selectedSavedIds.clear();
-    else selectedSavedIds = new Set(lastSavedDocs.map((d) => d.id));
-    updateSavedToolbar();
-    renderSavedGrid(lastSavedDocs);
-  });
+savedUnsaveBtn?.addEventListener("click", async () => {
+  if (!savedSelectMode || selectedSavedIds.size === 0) return;
+  if (!confirm(`Unsave ${selectedSavedIds.size} image(s)?`)) return;
 
-  savedUnsaveBtn?.addEventListener("click", async () => {
-    if (!savedSelectMode || selectedSavedIds.size === 0) return;
-    if (!confirm(`Unsave ${selectedSavedIds.size} image(s)?`)) return;
-
-    if (savedUnsaveBtn) savedUnsaveBtn.disabled = true;
-    try {
-      for (const id of selectedSavedIds) {
-        await deleteDoc(doc(db, "saved", id));
-      }
-      selectedSavedIds.clear();
-      updateSavedToolbar();
-    } catch (e) {
-      console.warn("unsave failed", e?.code || e?.message || e);
-    } finally {
-      if (savedUnsaveBtn) savedUnsaveBtn.disabled = false;
-    }
-  });
-}
+  savedUnsaveBtn.disabled = true;
+  try {
+    for (const id of selectedSavedIds) await deleteDoc(doc(db, "saved", id));
+    selectedSavedIds.clear();
+    syncSavedToolbar();
+  } catch (e) {
+    console.warn("unsave failed", e?.code || e?.message || e);
+  } finally {
+    savedUnsaveBtn.disabled = false;
+  }
+});
 
 function renderSavedGrid(docs) {
   if (!savedGrid) return;
@@ -636,17 +643,16 @@ function renderSavedGrid(docs) {
     const card = document.createElement("div");
     card.className = "savedCard";
 
+    if (savedSelectMode && selectedSavedIds.has(id)) card.classList.add("selected");
+
     const img = document.createElement("img");
     img.className = "savedThumb";
     img.alt = "saved";
 
     if (savedSelectMode) {
-      const selected = selectedSavedIds.has(id);
-      if (selected) card.classList.add("selected");
-
       const badge = document.createElement("div");
       badge.className = "selBadge";
-      badge.textContent = selected ? "✓" : "○";
+      badge.textContent = selectedSavedIds.has(id) ? "✓" : "○";
       card.appendChild(badge);
     }
 
@@ -659,7 +665,7 @@ function renderSavedGrid(docs) {
           if (savedSelectMode) {
             if (selectedSavedIds.has(id)) selectedSavedIds.delete(id);
             else selectedSavedIds.add(id);
-            updateSavedToolbar();
+            syncSavedToolbar();
             renderSavedGrid(lastSavedDocs);
             return;
           }
@@ -679,33 +685,27 @@ function renderSavedGrid(docs) {
     savedGrid.appendChild(card);
   });
 
-  if (savedSelectMode && savedUnsaveBtn) {
-    savedUnsaveBtn.disabled = selectedSavedIds.size === 0;
-  }
+  if (savedSelectMode && savedUnsaveBtn) savedUnsaveBtn.disabled = selectedSavedIds.size === 0;
 }
 
 function startSavedRealtime() {
   unsubSaved?.();
-  bindSavedHandlersOnce();
-  if (!savedGrid) return;
 
   const qSaved = query(collection(db, "saved"), orderBy("savedAt", "desc"), limit(200));
-  unsubSaved = safeOnSnapshot(
-    qSaved,
-    (snap) => {
-      const docs = [];
-      snap.forEach((d) => docs.push({ id: d.id, data: d.data() }));
-      lastSavedDocs = docs;
-      renderSavedGrid(docs);
-    },
-    "saved"
-  );
+  unsubSaved = safeOnSnapshot(qSaved, (snap) => {
+    const docs = [];
+    snap.forEach((d) => docs.push({ id: d.id, data: d.data() }));
+    lastSavedDocs = docs;
+    renderSavedGrid(docs);
+    syncSavedToolbar();
+  }, "saved");
 
-  updateSavedToolbar();
+  syncSavedToolbar();
 }
 
 /* ===============================
-   CHAT realtime
+   CHAT realtime (tap anywhere opens pic)
+   + view-once via views subcollection
    =============================== */
 let unsubChat = null;
 let chatHandlersBound = false;
@@ -717,6 +717,7 @@ function bindChatHandlersOnce() {
   sendBtn?.addEventListener("click", async () => {
     const text = (chatText?.value || "").trim();
     if (!text) return;
+
     try {
       await addDoc(collection(db, "messages"), {
         kind: "text",
@@ -731,8 +732,8 @@ function bindChatHandlersOnce() {
   });
 
   sendImgBtn?.addEventListener("click", async () => {
-    if (!imgPick?.files?.length) return;
-    const file = imgPick.files[0];
+    const file = imgPick?.files?.[0];
+    if (!file) return;
 
     if (file.size > 6 * 1024 * 1024) {
       alert("Max 6MB per image.");
@@ -740,6 +741,7 @@ function bindChatHandlersOnce() {
     }
 
     sendImgBtn.disabled = true;
+
     try {
       const { key } = await uploadImageToR2(file);
 
@@ -748,13 +750,14 @@ function bindChatHandlersOnce() {
         key,
         filename: file.name,
         contentType: file.type || "image/*",
+        viewOnce: true,
         uid: auth.currentUser.uid,
         createdAt: serverTimestamp()
       });
 
       imgPick.value = "";
     } catch (e) {
-      console.warn("send image failed", e?.code || e?.message || e);
+      alert(e?.message || String(e));
     } finally {
       sendImgBtn.disabled = false;
     }
@@ -764,76 +767,94 @@ function bindChatHandlersOnce() {
 function startChatRealtime() {
   unsubChat?.();
   bindChatHandlersOnce();
+
   if (!chatBox) return;
 
   const qMsg = query(collection(db, "messages"), orderBy("createdAt", "asc"), limit(200));
+  unsubChat = safeOnSnapshot(qMsg, (snap) => {
+    chatBox.innerHTML = "";
 
-  unsubChat = safeOnSnapshot(
-    qMsg,
-    (snap) => {
-      chatBox.innerHTML = "";
+    snap.forEach((d) => {
+      const m = d.data() || {};
+      const mine = m.uid === auth.currentUser.uid;
 
-      snap.forEach((d) => {
-        const m = d.data() || {};
-        const mine = m.uid === auth.currentUser.uid;
+      const div = document.createElement("div");
+      div.className = "msgBubble " + (mine ? "msgMe" : "msgOther");
 
-        const div = document.createElement("div");
-        div.className = "msgBubble " + (mine ? "msgMe" : "msgOther");
+      const meta = document.createElement("div");
+      meta.className = "msgMeta";
+      meta.textContent = mine ? "You" : displayNameFor(m.uid);
+      div.appendChild(meta);
 
-        const meta = document.createElement("div");
-        meta.className = "msgMeta";
-        meta.textContent = mine ? "You" : displayNameFor(m.uid);
-        div.appendChild(meta);
+      const body = document.createElement("div");
 
-        const body = document.createElement("div");
+      if (m.kind === "image") {
+        body.textContent = mine ? "📸 You sent a pic" : "📸 Tap to view pic";
+        div.classList.add("snap");
+        div.style.cursor = "pointer";
 
-        if (m.kind === "image") {
-          body.textContent = mine ? "📸 You sent a pic" : "📸 Tap to view pic";
-          div.classList.add("snap");
-          div.style.cursor = "pointer";
+        const viewDocRef = doc(db, "messages", d.id, "views", auth.currentUser.uid);
 
-          div.addEventListener("click", async () => {
-            try {
-              const blob = await fetchImageBlob(m.key);
-              openFullscreenWithBlob(blob, { key: m.key, filename: m.filename, contentType: m.contentType });
-            } catch (e) {
-              console.warn("open image failed", e?.code || e?.message || e);
-            }
-          });
-        } else {
-          body.textContent = m.text || "";
-        }
+        // mark opened if already viewed
+        getDoc(viewDocRef).then((vs) => {
+          if (vs.exists()) {
+            div.classList.remove("snap");
+            div.classList.add("opened");
+            body.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
+            div.style.cursor = "default";
+          }
+        }).catch(() => {});
 
-        div.appendChild(body);
-        chatBox.appendChild(div);
-      });
+        // ✅ Tap anywhere on bubble opens image
+        div.addEventListener("click", async () => {
+          try {
+            const vs = await getDoc(viewDocRef);
+            if (vs.exists()) return; // view-once
 
-      chatBox.scrollTop = chatBox.scrollHeight;
-    },
-    "messages"
-  );
+            const blob = await fetchImageBlob(m.key);
+            openFullscreenWithBlob(blob, { key: m.key, filename: m.filename, contentType: m.contentType });
+
+            await setDoc(viewDocRef, { openedAt: serverTimestamp() });
+
+            div.classList.remove("snap");
+            div.classList.add("opened");
+            body.textContent = mine ? "📸 Pic (opened)" : "📸 Opened";
+            div.style.cursor = "default";
+          } catch (e) {
+            alert(e?.message || String(e));
+          }
+        });
+      } else {
+        body.textContent = m.text || "";
+      }
+
+      div.appendChild(body);
+      chatBox.appendChild(div);
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }, "messages");
 }
 
 /* ===============================
-   DRAW — Advanced + Bucket + Text
+   DRAW — Advanced + Bucket + Text + Fullscreen + Gallery
    =============================== */
-let unsubDrawGallery = null;
-let drawInitDone = false;
+let drawReady = false;
 
 function startDrawingBoard() {
-  if (drawInitDone) return; // init once
-  drawInitDone = true;
-
   if (!drawCanvas || !canvasWrap) return;
+  if (drawReady) return;
+  drawReady = true;
+
   const ctx = drawCanvas.getContext("2d", { willReadFrequently: true });
 
-  // base white
+  // fill white base
   ctx.save();
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
   ctx.restore();
 
-  // text tool state
+  // Text tool state
   let boldOn = false;
   textBold?.addEventListener("click", () => {
     boldOn = !boldOn;
@@ -847,7 +868,7 @@ function startDrawingBoard() {
   toolMode?.addEventListener("change", refreshToolUI);
   refreshToolUI();
 
-  // undo/redo
+  // Undo/Redo
   const UNDO_LIMIT = 30;
   let undoStack = [];
   let redoStack = [];
@@ -867,7 +888,9 @@ function startDrawingBoard() {
     } catch {}
   }
 
-  function restore(img) { ctx.putImageData(img, 0, 0); }
+  function restore(img) {
+    ctx.putImageData(img, 0, 0);
+  }
 
   undoBtn?.addEventListener("click", () => {
     if (!undoStack.length) return;
@@ -887,7 +910,7 @@ function startDrawingBoard() {
     updateUndoRedoButtons();
   });
 
-  // symmetry
+  // Symmetry
   let symmetry = false;
   symBtn?.addEventListener("click", () => {
     symmetry = !symmetry;
@@ -899,17 +922,24 @@ function startDrawingBoard() {
     ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+    updateUndoRedoButtons();
   });
 
-  // fullscreen
-  function isFullscreen() { return document.fullscreenElement === canvasWrap; }
+  // Fullscreen
+  function isFullscreen() {
+    return document.fullscreenElement === canvasWrap;
+  }
+
   fsDrawBtn?.addEventListener("click", async () => {
     try {
       if (!document.fullscreenEnabled) return alert("Fullscreen not supported here.");
       if (isFullscreen()) await document.exitFullscreen();
       else await canvasWrap.requestFullscreen();
-    } catch (e) { console.warn("fullscreen failed", e); }
+    } catch (e) {
+      alert(e?.message || String(e));
+    }
   });
+
   document.addEventListener("fullscreenchange", () => {
     if (!fsDrawBtn) return;
     fsDrawBtn.textContent = isFullscreen() ? "Exit Fullscreen" : "⛶ Fullscreen";
@@ -1051,12 +1081,8 @@ function startDrawingBoard() {
     const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 255 };
   }
-  function colorAt(data, idx) {
-    return { r: data[idx], g: data[idx + 1], b: data[idx + 2], a: data[idx + 3] };
-  }
-  function setColor(data, idx, c) {
-    data[idx] = c.r; data[idx + 1] = c.g; data[idx + 2] = c.b; data[idx + 3] = 255;
-  }
+  function colorAt(data, idx) { return { r: data[idx], g: data[idx + 1], b: data[idx + 2], a: data[idx + 3] }; }
+  function setColor(data, idx, c) { data[idx] = c.r; data[idx + 1] = c.g; data[idx + 2] = c.b; data[idx + 3] = 255; }
   function distColor(c1, c2) {
     const dr = c1.r - c2.r, dg = c1.g - c2.g, db = c1.b - c2.b, da = c1.a - c2.a;
     return Math.sqrt(dr * dr + dg * dg + db * db + da * da);
@@ -1129,7 +1155,15 @@ function startDrawingBoard() {
     ctx.shadowBlur = 2;
     ctx.shadowColor = "rgba(0,0,0,.15)";
     ctx.fillText(txt, x, y);
+
+    if (symmetry) {
+      const cx = drawCanvas.width / 2;
+      const mx = cx + (cx - x);
+      ctx.fillText(txt, mx, y);
+    }
     ctx.restore();
+
+    updateUndoRedoButtons();
   }
 
   // pointer state
@@ -1150,7 +1184,6 @@ function startDrawingBoard() {
     if (mode === "text") {
       const p = canvasPoint(e);
       placeText(p.x, p.y);
-      updateUndoRedoButtons();
       return;
     }
 
@@ -1187,224 +1220,240 @@ function startDrawingBoard() {
   updateUndoRedoButtons();
 }
 
+let unsubDrawings = null;
+
 function startDrawGallery() {
-  unsubDrawGallery?.();
+  unsubDrawings?.();
   if (!drawGallery) return;
 
   const qDraw = query(collection(db, "drawings"), orderBy("createdAt", "desc"), limit(200));
 
-  unsubDrawGallery = safeOnSnapshot(
-    qDraw,
-    (snap) => {
-      drawGallery.innerHTML = "";
+  unsubDrawings = safeOnSnapshot(qDraw, (snap) => {
+    drawGallery.innerHTML = "";
 
-      snap.forEach((d) => {
-        const it = d.data() || {};
+    snap.forEach((d) => {
+      const it = d.data() || {};
 
-        const card = document.createElement("div");
-        card.className = "savedCard";
+      const card = document.createElement("div");
+      card.className = "savedCard";
 
-        const img = document.createElement("img");
-        img.className = "savedThumb";
-        img.alt = "drawing";
+      const img = document.createElement("img");
+      img.className = "savedThumb";
+      img.alt = "drawing";
 
-        (async () => {
-          try {
-            const blob = await fetchImageBlob(it.key);
-            img.src = URL.createObjectURL(blob);
-            img.addEventListener("click", () => {
-              openFullscreenWithBlob(blob, { key: it.key, filename: it.filename, contentType: it.contentType });
-            });
-          } catch {
-            img.src = "";
-          }
-        })();
+      (async () => {
+        try {
+          const blob = await fetchImageBlob(it.key);
+          img.src = URL.createObjectURL(blob);
+          img.addEventListener("click", () => {
+            openFullscreenWithBlob(blob, { key: it.key, filename: it.filename, contentType: it.contentType });
+          });
+        } catch {
+          img.src = "";
+        }
+      })();
 
-        const meta = document.createElement("div");
-        meta.className = "muted tiny";
-        meta.textContent = it.username || "drawing";
+      const meta = document.createElement("div");
+      meta.className = "muted tiny";
+      meta.textContent = it.createdByName || it.username || "drawing";
 
-        card.appendChild(img);
-        card.appendChild(meta);
-        drawGallery.appendChild(card);
-      });
-    },
-    "drawings"
-  );
+      card.appendChild(img);
+      card.appendChild(meta);
+      drawGallery.appendChild(card);
+    });
+  }, "drawings");
 }
 
 // Save drawing to R2 + Firestore
 saveDrawBtn?.addEventListener("click", async () => {
-  if (!auth.currentUser) return;
-
   try {
+    requireUser();
     const blob = await new Promise((resolve) => drawCanvas.toBlob(resolve, "image/png", 0.95));
-    if (!blob) return;
+    if (!blob) return alert("Could not export drawing.");
 
     const file = new File([blob], `drawing-${Date.now()}.png`, { type: "image/png" });
     const { key } = await uploadImageToR2(file);
 
-    const uDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-    const username = uDoc.exists() ? (uDoc.data()?.username || "") : "";
+    const me = auth.currentUser.uid;
+    const name = displayNameFor(me);
 
     await addDoc(collection(db, "drawings"), {
       key,
       filename: file.name,
       contentType: "image/png",
-      uid: auth.currentUser.uid,
-      username,
+      uid: me,
+      createdByName: name,
       createdAt: serverTimestamp()
     });
+
+    alert("Saved 💗");
   } catch (e) {
-    console.warn("save drawing failed", e?.code || e?.message || e);
+    alert(e?.message || String(e));
   }
 });
 
 /* ===============================
-   CALENDAR (shared events)
+   CALENDAR — shared events
    =============================== */
 let unsubEvents = null;
-let calendarHandlersBound = false;
 
-function buildCalendarUI() {
+function buildCalendarUIOnce() {
   if (!calendarRoot) return;
-  // Always rebuild (clean)
+  if (calendarRoot.dataset.built === "1") return;
+  calendarRoot.dataset.built = "1";
+
   calendarRoot.innerHTML = `
-    <h3>Calendar 📅</h3>
-    <p class="muted">Shared events you both can see.</p>
-
-    <div class="row">
-      <input id="calTitle" class="input" placeholder="Event title (ex: Date night 💗)" />
-      <input id="calWhen" class="input" type="datetime-local" />
+    <div class="panelTop">
+      <div>
+        <h3>Calendar 📅</h3>
+        <p class="muted">Shared events in Eastern Time (EST/EDT).</p>
+      </div>
     </div>
 
-    <div class="row">
-      <input id="calWhere" class="input" placeholder="Location (optional)" />
-      <button id="calAddBtn" class="btn primary">Add Event</button>
+    <div class="cardMini">
+      <div class="row">
+        <input id="evTitle" class="input" placeholder="Event title (ex: Date night 💗)" />
+      </div>
+      <div class="row">
+        <input id="evDate" class="input" type="date" />
+        <input id="evTime" class="input" type="time" />
+      </div>
+      <div class="row">
+        <input id="evNotes" class="input" placeholder="Notes (optional)" />
+      </div>
+      <div class="row">
+        <button id="evAddBtn" class="btn primary">Add Event</button>
+        <div id="evMsg" class="msg"></div>
+      </div>
     </div>
 
-    <div id="calMsg" class="msg"></div>
-    <div id="calList" class="list"></div>
+    <h4 class="mt">Upcoming</h4>
+    <div id="evList" class="list"></div>
   `;
+
+  // tiny style helper (in case your CSS doesn’t have it)
+  const styleFix = document.createElement("style");
+  styleFix.textContent = `
+    .cardMini{margin-top:10px;padding:14px;border-radius:18px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.35)}
+  `;
+  document.head.appendChild(styleFix);
 }
 
-function bindCalendarHandlersOnce() {
-  if (calendarHandlersBound) return;
-  calendarHandlersBound = true;
+function startEventsRealtime(isAdmin) {
+  buildCalendarUIOnce();
+  unsubEvents?.();
 
-  calendarRoot?.addEventListener("click", async (e) => {
-    const t = e.target;
+  const evTitle = document.getElementById("evTitle");
+  const evDate = document.getElementById("evDate");
+  const evTime = document.getElementById("evTime");
+  const evNotes = document.getElementById("evNotes");
+  const evAddBtn = document.getElementById("evAddBtn");
+  const evMsg = document.getElementById("evMsg");
+  const evList = document.getElementById("evList");
 
-    if (t && t.id === "calAddBtn") {
-      const calTitle = document.getElementById("calTitle");
-      const calWhen = document.getElementById("calWhen");
-      const calWhere = document.getElementById("calWhere");
-      const calMsg = document.getElementById("calMsg");
+  function msg(t, ok = false) {
+    if (!evMsg) return;
+    evMsg.textContent = t || "";
+    evMsg.style.color = ok ? "#1f7a44" : "#8a1b3d";
+  }
 
-      try {
-        const title = (calTitle?.value || "").trim();
-        const whenVal = calWhen?.value || "";
-        const where = (calWhere?.value || "").trim();
+  evAddBtn?.addEventListener("click", async () => {
+    try {
+      requireUser();
+      const title = (evTitle?.value || "").trim();
+      const date = evDate?.value || "";
+      const time = evTime?.value || "";
+      const notes = (evNotes?.value || "").trim();
 
-        if (!title) throw new Error("Title required.");
-        if (!whenVal) throw new Error("Pick a date/time.");
+      if (!title) throw new Error("Add a title.");
+      if (!date) throw new Error("Pick a date.");
+      if (!time) throw new Error("Pick a time.");
 
-        const whenIso = new Date(whenVal).toISOString();
+      const me = auth.currentUser.uid;
 
-        const uDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-        const username = uDoc.exists() ? (uDoc.data()?.username || "") : "";
+      await addDoc(collection(db, "events"), {
+        title,
+        date,     // YYYY-MM-DD (EST-safe display)
+        time,     // HH:MM
+        notes,
+        tz: "America/New_York",
+        createdBy: me,
+        createdByName: displayNameFor(me),
+        createdAt: serverTimestamp()
+      });
 
-        await addDoc(collection(db, "events"), {
-          title,
-          whenIso,
-          where,
-          createdAt: serverTimestamp(),
-          uid: auth.currentUser.uid,
-          username
-        });
-
-        if (calTitle) calTitle.value = "";
-        if (calWhere) calWhere.value = "";
-        setMsg(calMsg, "Added ✅", true);
-        setTimeout(() => setMsg(calMsg, ""), 900);
-      } catch (err) {
-        setMsg(calMsg, err?.message || String(err));
-      }
-    }
-
-    if (t && t.dataset && t.dataset.delEventId) {
-      const eventId = t.dataset.delEventId;
-      const ownerUid = t.dataset.ownerUid || "";
-      const isAdmin = !!window.__isAdmin;
-      const canDelete = isAdmin || ownerUid === auth.currentUser.uid;
-      if (!canDelete) return;
-      if (!confirm("Delete this event?")) return;
-      await deleteDoc(doc(db, "events", eventId));
+      msg("Added ✅", true);
+      if (evTitle) evTitle.value = "";
+      if (evNotes) evNotes.value = "";
+    } catch (e) {
+      msg(e?.message || String(e), false);
     }
   });
-}
 
-function startEventsRealtime() {
-  unsubEvents?.();
-  buildCalendarUI();
-  bindCalendarHandlersOnce();
+  const qEv = query(collection(db, "events"), orderBy("date", "asc"), orderBy("time", "asc"), limit(300));
+  unsubEvents = safeOnSnapshot(qEv, (snap) => {
+    if (!evList) return;
+    evList.innerHTML = "";
 
-  const calList = document.getElementById("calList");
-  if (!calList) return;
+    snap.forEach((d) => {
+      const e = d.data() || {};
+      const row = document.createElement("div");
+      row.className = "item";
 
-  const qEvents = query(collection(db, "events"), orderBy("whenIso", "asc"), limit(300));
+      const left = document.createElement("div");
+      const who = e.createdByName ? ` · <small class="muted">${esc(e.createdByName)}</small>` : "";
+      const notes = e.notes ? `<div class="muted tiny">${esc(e.notes)}</div>` : "";
+      left.innerHTML = `
+        <div><b>${esc(e.title || "Event")}</b></div>
+        <small>${esc(e.date || "")} @ ${esc(e.time || "")}${who}</small>
+        ${notes}
+      `;
 
-  unsubEvents = safeOnSnapshot(
-    qEvents,
-    (snap) => {
-      calList.innerHTML = "";
+      const actions = document.createElement("div");
+      actions.className = "actions";
 
-      if (snap.empty) {
-        calList.innerHTML = `<div class="muted tiny">No events yet 💗</div>`;
-        return;
-      }
+      // Edit (any approved user can edit for simplicity; if you want admin-only, change it)
+      const editBtn = document.createElement("button");
+      editBtn.className = "btn";
+      editBtn.textContent = "Edit";
+      editBtn.onclick = async () => {
+        const nt = prompt("Title:", e.title || "");
+        if (nt === null) return;
+        const nd = prompt("Date (YYYY-MM-DD):", e.date || "");
+        if (nd === null) return;
+        const ntime = prompt("Time (HH:MM):", e.time || "");
+        if (ntime === null) return;
+        const nn = prompt("Notes:", e.notes || "");
+        if (nn === null) return;
 
-      snap.forEach((d) => {
-        const ev = d.data() || {};
-        const row = document.createElement("div");
-        row.className = "item";
+        await updateDoc(doc(db, "events", d.id), {
+          title: String(nt).trim(),
+          date: String(nd).trim(),
+          time: String(ntime).trim(),
+          notes: String(nn).trim()
+        });
+      };
 
-        const left = document.createElement("div");
-        const when = ev.whenIso ? new Date(ev.whenIso) : null;
-        const whenPretty = when ? when.toLocaleString() : "—";
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn primary";
+      delBtn.textContent = "Delete";
+      delBtn.onclick = async () => {
+        if (!confirm("Delete this event?")) return;
+        await deleteDoc(doc(db, "events", d.id));
+      };
 
-        left.innerHTML = `
-          <div><b>${esc(ev.title || "Event")}</b></div>
-          <small>${esc(whenPretty)}${ev.where ? ` · ${esc(ev.where)}` : ""}</small>
-        `;
+      actions.appendChild(editBtn);
+      actions.appendChild(delBtn);
 
-        const actions = document.createElement("div");
-        actions.className = "actions";
-
-        const del = document.createElement("button");
-        del.className = "btn";
-        del.textContent = "Delete";
-        del.dataset.delEventId = d.id;
-        del.dataset.ownerUid = ev.uid || "";
-
-        const canDelete = (!!window.__isAdmin) || (ev.uid === auth.currentUser.uid);
-        if (!canDelete) {
-          del.disabled = true;
-          del.title = "Only admin or the creator can delete.";
-        }
-
-        actions.appendChild(del);
-        row.appendChild(left);
-        row.appendChild(actions);
-        calList.appendChild(row);
-      });
-    },
-    "events"
-  );
+      row.appendChild(left);
+      row.appendChild(actions);
+      evList.appendChild(row);
+    });
+  }, "events");
 }
 
 /* ===============================
-   LISTENERS START/STOP
+   LISTENER START/STOP (NO RACE CONDITIONS)
    =============================== */
 let listenersStarted = false;
 
@@ -1413,7 +1462,7 @@ function stopAllListeners() {
   unsubAccounts?.(); unsubAccounts = null;
   unsubChat?.(); unsubChat = null;
   unsubSaved?.(); unsubSaved = null;
-  unsubDrawGallery?.(); unsubDrawGallery = null;
+  unsubDrawings?.(); unsubDrawings = null;
   unsubEvents?.(); unsubEvents = null;
   listenersStarted = false;
 }
@@ -1422,14 +1471,20 @@ function startAllAfterApproved(isAdmin) {
   if (listenersStarted) return;
   listenersStarted = true;
 
-  console.log("Auth ready, starting Firestore listeners");
+  console.log("Auth ready + approved, starting listeners");
+  window.__isAdmin = !!isAdmin;
 
   startUsersRealtime();
+
+  // show admin tab
+  if (isAdmin) adminTabBtn?.classList.remove("hidden");
+  else adminTabBtn?.classList.add("hidden");
+
   startChatRealtime();
   startSavedRealtime();
   startDrawingBoard();
   startDrawGallery();
-  startEventsRealtime();
+  startEventsRealtime(isAdmin);
 
   if (isAdmin) {
     loadPendingUsers();
@@ -1438,24 +1493,25 @@ function startAllAfterApproved(isAdmin) {
 }
 
 /* ===============================
-   AUTH GATE (IMPORTANT FIX)
+   AUTH GATE (pending vs approved)
    =============================== */
 onAuthStateChanged(auth, async (user) => {
   stopAllListeners();
 
   if (!user) {
+    showSignOut(false);
     show(authView);
     return;
   }
 
-  btnSignOut?.classList.remove("hidden");
+  showSignOut(true);
 
   try {
     const userRef = doc(db, "users", user.uid);
     const snap = await getDoc(userRef);
 
-    // If profile missing, create a basic one (still pending)
     if (!snap.exists()) {
+      // profile missing (edge case)
       const inferred = (user.email || "").split("@")[0] || "";
       await setDoc(userRef, {
         username: inferred,
@@ -1477,17 +1533,12 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
+    // approved
     show(appView);
+    startAllAfterApproved(!!data.isAdmin);
 
-    const isAdmin = !!data.isAdmin;
-    window.__isAdmin = isAdmin;
-
-    if (isAdmin) adminTabBtn?.classList.remove("hidden");
-    else adminTabBtn?.classList.add("hidden");
-
-    startAllAfterApproved(isAdmin);
   } catch (e) {
-    console.warn("Auth gate failed", e?.code || e?.message || e);
+    console.warn("Auth gate error", e?.code || e?.message || e);
     show(authView);
   }
 });
