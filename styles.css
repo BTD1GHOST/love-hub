@@ -120,7 +120,6 @@ body{
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
 }
-
 .tab{
   border:none;
   cursor:pointer;
@@ -129,12 +128,10 @@ body{
   background: rgba(255,255,255,.28);
   font-weight:800;
 }
-
 .tab.active{
   background: linear-gradient(180deg, #ff8ac3, #ff5ca9);
   color:white;
 }
-
 .panel{
   margin-top:12px;
   padding:16px;
@@ -152,24 +149,12 @@ body{
   gap:10px;
   flex-wrap:wrap;
 }
-
 .panelActions{
   display:flex;
   gap:10px;
   flex-wrap:wrap;
   align-items:center;
 }
-
-/* Love */
-.loveCard{
-  margin-top:10px;
-  padding:18px;
-  border-radius:18px;
-  background: rgba(255,255,255,.28);
-  border:1px solid var(--stroke);
-  text-align:center;
-}
-.loveBig{font-size:44px;font-weight:900}
 
 /* Admin list */
 .adminActions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
@@ -202,6 +187,7 @@ body{
   border-radius:14px;
   background: rgba(255,255,255,.35);
   position:relative;
+  word-wrap: break-word;
 }
 .msgMeta{
   font-size:12px;
@@ -232,15 +218,6 @@ body{
   bottom:-18px;
   font-size:12px;
   color:rgba(255,255,255,.9);
-}
-.opened{opacity:.65; cursor:default;}
-.opened::after{
-  content:"Opened ✅";
-  position:absolute;
-  right:10px;
-  bottom:-18px;
-  font-size:12px;
-  color:rgba(59,27,42,.7);
 }
 
 /* Saved grid (also used for Draw gallery) */
@@ -309,6 +286,7 @@ body{
   border:1px solid var(--stroke);
   background: rgba(255,255,255,.22);
 }
+
 .tip{opacity:.8}
 
 .canvasWrap{
@@ -379,104 +357,4 @@ body{
   padding: 10px 14px 14px;
   color: rgba(255,255,255,.7);
   text-align:center;
-}
-
-/* ===============================
-   CALENDAR (ADDED)
-   =============================== */
-.calBox{
-  margin-top:12px;
-  display:grid;
-  gap:16px;
-}
-
-.calForm{
-  margin-top:10px;
-  padding:16px;
-  border-radius:18px;
-  background: rgba(255,255,255,.28);
-  border:1px solid var(--stroke);
-  box-shadow: var(--shadow);
-  display:grid;
-  gap:12px;
-}
-
-.calRow{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:flex-end;
-}
-
-.calField{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.calActions{
-  align-items:center;
-  justify-content:space-between;
-}
-
-.calActions .btn{
-  min-width:160px;
-}
-
-.calEvent{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:12px;
-  border-radius:16px;
-  background: rgba(255,255,255,.28);
-  border:1px solid var(--stroke);
-}
-
-.calEventLeft{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-
-.calEventTitle{
-  font-weight:900;
-}
-
-.calEventMeta{
-  font-size:12px;
-  color:var(--muted);
-}
-
-.calEventNotes{
-  font-size:12px;
-  opacity:.85;
-}
-
-.calEventActions{
-  display:flex;
-  gap:8px;
-}
-
-.calEmpty{
-  text-align:center;
-  padding:16px;
-  border-radius:16px;
-  background: rgba(255,255,255,.22);
-  border:1px dashed var(--stroke);
-  color:var(--muted);
-  font-size:13px;
-}
-
-@media (max-width:600px){
-  .calActions{
-    flex-direction:column;
-    align-items:flex-start;
-    gap:10px;
-  }
-  .calActions .btn{
-    width:100%;
-  }
 }
