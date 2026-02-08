@@ -520,3 +520,130 @@ body{
   .tabs{gap:8px}
   .tab{padding:9px 10px}
 }
+/* ===============================
+   CUTE ROUND INPUTS + HEART VIBES
+   =============================== */
+
+/* Extra rounded + soft inputs */
+.input,
+.chatInput .input,
+.select {
+  border-radius: 999px; /* pill-shaped */
+  padding: 14px 18px;
+  background: rgba(255,255,255,.45);
+  border: 1px solid rgba(255,182,213,.55);
+  box-shadow:
+    inset 0 6px 14px rgba(255,255,255,.6),
+    0 8px 18px rgba(255, 92, 169, .12);
+  font-weight: 600;
+}
+
+/* Softer placeholder */
+.input::placeholder {
+  color: rgba(255, 92, 169, .55);
+  font-weight: 500;
+}
+
+/* Cute focus glow */
+.input:focus,
+.chatInput .input:focus,
+.select:focus {
+  outline: none;
+  border-color: #ff7fb8;
+  box-shadow:
+    0 0 0 5px rgba(255, 127, 184, .22),
+    inset 0 6px 14px rgba(255,255,255,.7);
+}
+
+/* Chat bar container – round + cozy */
+.chatInput {
+  border-radius: 999px;
+  padding: 10px 14px;
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,.45),
+      rgba(255,255,255,.25)
+    );
+  border: 1px solid rgba(255,182,213,.45);
+  position: relative;
+}
+
+/* Floating heart inside chat bar 💗 */
+.chatInput::after {
+  content: "💗";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  opacity: .6;
+  pointer-events: none;
+}
+
+/* Make send buttons extra cute */
+.chatInput .btn,
+.chatInput .btn.primary {
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 14px;
+}
+
+/* Message bubbles – rounder & softer */
+.msgBubble {
+  border-radius: 22px;
+  padding: 12px 14px;
+}
+
+/* My messages: heart glow */
+.msgMe {
+  background:
+    linear-gradient(180deg, #ff8fc8, #ff5fae);
+  box-shadow:
+    0 12px 30px rgba(255, 92, 169, .28);
+}
+
+/* Other messages: soft blush */
+.msgOther {
+  background: rgba(255,255,255,.5);
+}
+
+/* Little heart under snap messages */
+.snap::after {
+  content: "💗 tap";
+  font-size: 12px;
+  opacity: .85;
+}
+
+/* Tabs more rounded & cute */
+.tab {
+  border-radius: 999px;
+  padding: 10px 16px;
+}
+
+/* Active tab glow */
+.tab.active {
+  box-shadow:
+    0 10px 24px rgba(255, 92, 169, .28);
+}
+
+/* Buttons – pill + soft bounce */
+.btn {
+  border-radius: 999px;
+}
+
+/* Tiny floating hearts animation (very subtle) */
+@keyframes floatHeart {
+  0% { transform: translateY(0); opacity: .4; }
+  100% { transform: translateY(-8px); opacity: .8; }
+}
+
+.chatInput::before {
+  content: "💞";
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  opacity: .4;
+  animation: floatHeart 2s ease-in-out infinite alternate;
+}
