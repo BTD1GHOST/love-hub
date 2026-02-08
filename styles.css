@@ -647,3 +647,87 @@ body{
   opacity: .4;
   animation: floatHeart 2s ease-in-out infinite alternate;
 }
+/* ===============================
+   CHAT INPUT — CUTE & COZY FIX
+   =============================== */
+
+/* Chat input row spacing */
+.chatInput {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(255, 140, 190, .45);
+  box-shadow:
+    inset 0 6px 14px rgba(255,255,255,.7),
+    0 14px 30px rgba(255, 92, 169, .18);
+  position: relative;
+}
+
+/* The actual typing box */
+.chatInput input[type="text"],
+#chatText {
+  flex: 1;
+  height: 48px;                 /* 🔥 BIGGER */
+  padding: 0 22px;              /* comfy */
+  border-radius: 999px;
+  border: none;
+  background: rgba(255,255,255,.85);
+  font-size: 15px;
+  font-weight: 600;
+  color: #8a1b3d;
+  box-shadow:
+    inset 0 4px 10px rgba(255,255,255,.8);
+}
+
+/* Placeholder = soft & cute */
+.chatInput input::placeholder {
+  color: rgba(255, 92, 169, .55);
+  font-weight: 500;
+}
+
+/* Focus glow */
+.chatInput input:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 5px rgba(255, 127, 184, .25),
+    inset 0 4px 10px rgba(255,255,255,.9);
+}
+
+/* Send + file buttons match the input now */
+.chatInput .btn {
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Primary send button extra pop */
+.chatInput .btn.primary {
+  box-shadow:
+    0 10px 24px rgba(255, 92, 169, .35);
+}
+
+/* Floating hearts (subtle 💗) */
+.chatInput::before {
+  content: "💗";
+  position: absolute;
+  left: 14px;
+  bottom: -18px;
+  font-size: 14px;
+  opacity: .35;
+}
+
+.chatInput::after {
+  content: "💞";
+  position: absolute;
+  right: 16px;
+  bottom: -18px;
+  font-size: 14px;
+  opacity: .35;
+}
