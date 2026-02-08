@@ -159,30 +159,31 @@ const loveShareBtn = document.getElementById("loveShareBtn");
 const loveBgPick = document.getElementById("loveBgPick");
 
 // ===== Helpers =====
-function showAuth() {
-  authView?.classList.remove("hidden");
+// helpers
+function show(view) {
+  authView?.classList.add("hidden");
   pendingView?.classList.add("hidden");
   appView?.classList.add("hidden");
   btnSignOut?.classList.add("hidden");
+  view?.classList.remove("hidden");
 }
 
-function showPending(msg = "Pending approval 🌸") {
-  authView?.classList.add("hidden");
-  pendingView?.classList.remove("hidden");
-  appView?.classList.add("hidden");
-  btnSignOut?.classList.add("hidden");
+function showAuth(msg = "") {
+  show(authView);
+  if (msg) setMsg(authMsg, msg, false);
+}
 
-  // optional: if you have a pending message element
-  const p = document.getElementById("pendingMsg");
-  if (p) p.textContent = msg;
+function showPending(msg = "") {
+  show(pendingView);
+  const el = document.getElementById("pendingMsg");
+  if (el) el.textContent = msg || "";
 }
 
 function showApp() {
-  authView?.classList.add("hidden");
-  pendingView?.classList.add("hidden");
-  appView?.classList.remove("hidden");
+  show(appView);
   btnSignOut?.classList.remove("hidden");
 }
+
 
 function setMsg(el, text, ok = false) {
   if (!el) return;
