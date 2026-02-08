@@ -1,262 +1,522 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Our Little Hub 💗</title>
-  <link rel="stylesheet" href="./styles.css" />
-</head>
+:root{
+  --pink1:#ffb6d5;
+  --pink2:#ffd3e6;
 
-<body>
-  <!-- Top bar -->
-  <header class="topbar">
-    <div class="brand">
-      <div class="brandIcon">💗</div>
-      <div class="brandText">
-        <div class="brandTitle">Our Little Hub</div>
-        <div class="brandSub">private + cute</div>
-      </div>
-    </div>
+  --ink:#3b1b2a;
+  --muted: rgba(59,27,42,.68);
 
-    <button id="btnSignOut" class="btn ghost hidden">Sign out</button>
-  </header>
+  --stroke: rgba(255,255,255,.38);
+  --card: rgba(255,255,255,.26);
+  --glass: rgba(255,255,255,.18);
 
-  <!-- AUTH VIEW -->
-  <main id="authView" class="card">
-    <h2>Welcome 💞</h2>
-    <p class="muted">Sign in or create an account. New accounts must be approved.</p>
+  --shadow: 0 18px 60px rgba(255, 80, 160, .22);
+  --shadow2: 0 12px 30px rgba(0,0,0,.10);
 
-    <div class="authRow">
-      <input id="username" type="text" placeholder="username" autocomplete="username" />
-      <input id="password" type="password" placeholder="password" autocomplete="current-password" />
-    </div>
+  --hot1:#ff8ac3;
+  --hot2:#ff5ca9;
 
-    <div class="authActions">
-      <button id="btnSignIn" class="btn primary">Sign In</button>
-      <button id="btnSignUp" class="btn">Sign Up</button>
-    </div>
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
 
-    <div id="authMsg" class="tiny muted"></div>
-    <div class="tiny muted" style="margin-top:10px;">
-      Note: usernames are private inside the hub. Admin can set display names.
-    </div>
-  </main>
+  --focus: 0 0 0 4px rgba(255, 92, 169, .20);
+}
 
-  <!-- PENDING VIEW (OLD STYLE: FULL PAGE, NOTHING ELSE) -->
-  <main id="pendingView" class="card hidden">
-    <h2>Pending Approval 💗</h2>
-    <p class="muted">
-      Your account is waiting for approval. You won’t be able to access the hub until an admin approves you.
-    </p>
-    <div id="pendingMsg" class="tiny muted"></div>
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  color:var(--ink);
+  min-height:100vh;
+  -webkit-font-smoothing: antialiased;
 
-    <div class="pendingTip">
-      You can keep this page open — once you’re approved, the hub will unlock automatically.
-    </div>
-  </main>
+  background:
+    radial-gradient(1200px 900px at 20% 5%, rgba(255,255,255,.65) 0%, transparent 60%),
+    radial-gradient(900px 700px at 85% 20%, rgba(255,255,255,.55) 0%, transparent 55%),
+    radial-gradient(850px 750px at 30% 90%, rgba(255, 180, 220, .55) 0%, transparent 55%),
+    linear-gradient(180deg, var(--pink1), var(--pink2));
+}
 
-  <!-- APP VIEW -->
-  <main id="appView" class="card hidden">
+/* ===== Top bar ===== */
+.topbar{
+  position: sticky;
+  top:0;
+  z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 16px;
+  background: rgba(255,255,255,.18);
+  border-bottom: 1px solid rgba(255,255,255,.22);
+  backdrop-filter: blur(14px);
+}
 
-    <!-- Pending Banner (approved users won't see this; pending users NEVER reach appView) -->
-    <div id="pendingBanner" class="banner hidden">
-      💗 Pending approval — some features are locked.
-    </div>
+.brand{display:flex; gap:12px; align-items:center}
+.logo{
+  width:46px; height:46px;
+  display:grid; place-items:center;
+  background: rgba(255,255,255,.34);
+  border:1px solid var(--stroke);
+  border-radius:16px;
+  box-shadow: var(--shadow);
+}
+.title{font-weight:900; letter-spacing:.2px}
+.subtitle{font-size:12px; color:var(--muted)}
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab active" data-tab="chat">💬 Chat</button>
-      <button class="tab" data-tab="saved">📌 Saved</button>
-      <button class="tab" data-tab="draw">🎨 Draw</button>
-      <button class="tab" data-tab="love">💗 Love</button>
-      <button class="tab" data-tab="calendar">🗓️ Calendar</button>
-      <button class="tab adminOnly hidden" data-tab="admin">🛡️ Admin</button>
-    </div>
+/* ===== Layout cards ===== */
+.card{
+  width:min(760px, calc(100% - 24px));
+  margin: 16px auto;
+  padding:18px;
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  border:1px solid var(--stroke);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
 
-    <!-- PANELS -->
+.app{
+  width:min(980px, calc(100% - 24px));
+  margin: 12px auto 30px;
+}
 
-    <!-- CHAT -->
-    <section id="tab-chat" class="panel">
-      <h3>Chat <span class="tiny muted">💬</span></h3>
+.panel{
+  margin-top:12px;
+  padding:16px;
+  border-radius: var(--radius-xl);
+  background: rgba(255,255,255,.22);
+  border:1px solid var(--stroke);
+  box-shadow: var(--shadow2);
+  backdrop-filter: blur(12px);
+}
 
-      <div id="chatBox" class="chatBox"></div>
+.hidden{display:none !important;}
+.muted{color:var(--muted)}
+.tiny{font-size:12px}
+.mt{margin-top:16px}
 
-      <div class="chatControls">
-        <input id="chatText" type="text" placeholder="Type..." />
-        <button id="sendBtn" class="btn primary">Send</button>
+/* ===== Inputs / Buttons ===== */
+.row{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
 
-        <label class="fileBtn btn">
-          Choose File
-          <input id="imgPick" type="file" accept="image/*" hidden />
-        </label>
+.input{
+  flex:1;
+  min-width: 220px;
+  padding:12px 12px;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,.45);
+  background: rgba(255,255,255,.35);
+  outline:none;
+  color: var(--ink);
+  box-shadow: 0 6px 18px rgba(0,0,0,.06) inset;
+}
+.input.small{
+  min-width:180px;
+  padding:10px 12px;
+  border-radius: 14px;
+}
 
-        <button id="sendImgBtn" class="btn ghost">Send Pic 📸</button>
-      </div>
+.input::placeholder{color: rgba(59,27,42,.52)}
+.input:focus{
+  border-color: rgba(255, 92, 169, .55);
+  box-shadow: var(--focus), 0 8px 22px rgba(0,0,0,.08) inset;
+}
 
-      <div class="tiny muted">Tap a pic message bubble to open fullscreen (view-once).</div>
-    </section>
+.select{
+  padding:10px 12px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.45);
+  background: rgba(255,255,255,.32);
+  font-weight:800;
+  outline:none;
+}
+.select:focus{
+  border-color: rgba(255, 92, 169, .55);
+  box-shadow: var(--focus);
+}
 
-    <!-- SAVED -->
-    <section id="tab-saved" class="panel hidden">
-      <div class="rowBetween">
-        <h3>Saved <span class="tiny muted">📌</span></h3>
-        <div class="savedTools">
-          <button id="savedSelectBtn" class="btn">Select</button>
-          <button id="savedSelectAllBtn" class="btn hidden">Select All</button>
-          <button id="savedUnsaveBtn" class="btn primary hidden" disabled>Unsave</button>
-        </div>
-      </div>
+.btn{
+  padding:12px 14px;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,.42);
+  background: rgba(255,255,255,.30);
+  cursor:pointer;
+  font-weight:900;
+  color: var(--ink);
+  transition: transform .08s ease, filter .12s ease, background .12s ease, opacity .12s ease;
+}
+.btn:hover{filter: brightness(1.03)}
+.btn:active{transform: translateY(1px)}
+.btn[disabled]{opacity:.55; cursor:not-allowed}
 
-      <div id="savedGrid" class="savedGrid"></div>
-    </section>
+.btn.primary{
+  background: linear-gradient(180deg, var(--hot1), var(--hot2));
+  color:white;
+  border:none;
+  box-shadow: 0 10px 26px rgba(255, 92, 169, .25);
+}
+.btn.primary:hover{filter: brightness(1.02)}
+.btn.primary:active{transform: translateY(1px)}
 
-    <!-- DRAW -->
-    <section id="tab-draw" class="panel hidden">
-      <div class="rowBetween">
-        <h3>Draw <span class="tiny muted">🎨</span></h3>
-        <div class="drawActions">
-          <button id="undoBtn" class="btn" disabled>Undo</button>
-          <button id="redoBtn" class="btn" disabled>Redo</button>
-          <button id="symBtn" class="btn">🪞 Symmetry: Off</button>
-          <button id="clearBtn" class="btn">Clear</button>
-          <button id="fsDrawBtn" class="btn ghost">⛶ Fullscreen</button>
-          <button id="saveDrawBtn" class="btn primary">Save 💾</button>
-        </div>
-      </div>
+.pill{
+  padding:10px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.40);
+  background: rgba(255,255,255,.28);
+  cursor:pointer;
+  font-weight:900;
+}
 
-      <div class="drawToolbar">
-        <select id="toolMode">
-          <option value="brush">Brush</option>
-          <option value="bucket">Bucket</option>
-          <option value="text">Text</option>
-        </select>
+.msg{margin-top:10px; font-size:13px; line-height:1.35}
+.heartbox{
+  margin-top:12px;
+  padding:16px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.22);
+  border:1px solid var(--stroke);
+  text-align:center;
+  font-size:18px;
+}
 
-        <select id="brushType">
-          <option value="pen">Pen</option>
-          <option value="pencil">Pencil</option>
-          <option value="marker">Marker</option>
-          <option value="highlighter">Highlighter</option>
-          <option value="spray">Spray</option>
-          <option value="calligraphy">Calligraphy</option>
-          <option value="neon">Neon</option>
-          <option value="watercolor">Watercolor</option>
-          <option value="eraser">Eraser</option>
-        </select>
+/* ===== Tabs ===== */
+.tabs{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:12px;
+  border-radius: var(--radius-xl);
+  background: rgba(255,255,255,.20);
+  border:1px solid rgba(255,255,255,.25);
+  box-shadow: var(--shadow2);
+  backdrop-filter: blur(12px);
+}
+.tab{
+  border:none;
+  cursor:pointer;
+  padding:10px 12px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.26);
+  font-weight:900;
+  color: var(--ink);
+  transition: filter .12s ease, transform .08s ease;
+}
+.tab:hover{filter: brightness(1.03)}
+.tab:active{transform: translateY(1px)}
+.tab.active{
+  background: linear-gradient(180deg, var(--hot1), var(--hot2));
+  color:white;
+  box-shadow: 0 10px 22px rgba(255, 92, 169, .20);
+}
+.tab:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
 
-        <label class="tiny">Color <input id="penColor" type="color" value="#ff4fa5"></label>
-        <label class="tiny">Size <input id="penSize" type="range" min="1" max="72" value="12"></label>
-        <label class="tiny">Opacity <input id="penOpacity" type="range" min="5" max="100" value="85"></label>
-        <label class="tiny">Smooth <input id="penSmooth" type="range" min="0" max="90" value="35"></label>
-        <label class="tiny">Fill tol <input id="fillTol" type="range" min="1" max="120" value="24"></label>
-      </div>
+.panelTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.panelActions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+}
 
-      <div id="textControls" class="textControls" style="display:none;">
-        <input id="textValue" type="text" placeholder="Type text..." />
-        <select id="textFont">
-          <option value="system">System</option>
-          <option value="serif">Serif</option>
-          <option value="mono">Mono</option>
-          <option value="cursive">Cursive</option>
-        </select>
-        <input id="textSize" type="number" min="10" max="140" value="44" />
-        <button id="textBold" class="btn">B</button>
-      </div>
+/* ===== Admin list ===== */
+.adminActions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.list{margin-top:12px; display:grid; gap:10px}
+.item{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:10px;
+  padding:12px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.30);
+}
+.item small{color:var(--muted); display:block; margin-top:2px}
+.item .actions{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
 
-      <div id="canvasWrap" class="canvasWrap">
-        <canvas id="drawCanvas" width="1100" height="650"></canvas>
-      </div>
+/* ===== Chat ===== */
+.chatBox{
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.28);
+  margin-bottom:12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  scroll-behavior:smooth;
+}
+.chatBox::-webkit-scrollbar{width:10px}
+.chatBox::-webkit-scrollbar-thumb{
+  background: rgba(255, 92, 169, .22);
+  border: 2px solid rgba(255,255,255,.16);
+  border-radius: 999px;
+}
 
-      <h4 style="margin-top:16px;">Gallery</h4>
-      <div id="drawGallery" class="savedGrid"></div>
-    </section>
+.msgBubble{
+  max-width: 78%;
+  padding:10px 12px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.34);
+  border:1px solid rgba(255,255,255,.28);
+  position:relative;
+  line-height:1.25;
+  box-shadow: 0 10px 20px rgba(0,0,0,.06);
+}
+.msgMeta{
+  font-size:12px;
+  opacity:.88;
+  margin-bottom:6px;
+  font-weight:900;
+}
+.msgMe{
+  align-self:flex-end;
+  background: linear-gradient(180deg, var(--hot1), var(--hot2));
+  color:white;
+  border:none;
+  box-shadow: 0 12px 28px rgba(255, 92, 169, .22);
+}
+.msgOther{align-self:flex-start;}
 
-    <!-- LOVE -->
-    <section id="tab-love" class="panel hidden">
-      <div class="rowBetween">
-        <h3>Love 💗</h3>
-        <div class="loveActions">
-          <button id="loveSettingsBtn" class="btn">Set Photo</button>
-          <button id="loveShareBtn" class="btn primary">Share</button>
-          <input id="loveBgPick" type="file" accept="image/*" hidden />
-        </div>
-      </div>
+.snap{cursor:pointer;}
+.snap::after{
+  content:"Tap to view 👀";
+  position:absolute;
+  right:10px;
+  bottom:-18px;
+  font-size:12px;
+  color: rgba(255,255,255,.92);
+  text-shadow: 0 2px 6px rgba(0,0,0,.25);
+}
+.opened{opacity:.70; cursor:default;}
+.opened::after{
+  content:"Opened ✅";
+  position:absolute;
+  right:10px;
+  bottom:-18px;
+  font-size:12px;
+  color: rgba(59,27,42,.70);
+}
 
-      <div id="loveHero" class="loveHero">
-        <div class="loveHeroInner">
-          <div class="loveBig">
-            <div class="loveSmall muted">together</div>
-            <div id="loveYMD" class="loveMain">—</div>
-          </div>
+/* ⭐ Prettier "type bar" */
+.chatInput{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  padding: 10px;
+  border-radius: 22px;
+  background: rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.32);
+  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+}
 
-          <div class="loveStats">
-            <div class="stat"><div class="muted tiny">months</div><div id="loveMonths" class="statVal">—</div></div>
-            <div class="stat"><div class="muted tiny">weeks</div><div id="loveWeeks" class="statVal">—</div></div>
-            <div class="stat"><div class="muted tiny">days</div><div id="loveDays2" class="statVal">—</div></div>
-            <div class="stat"><div class="muted tiny">hours</div><div id="loveHours" class="statVal">—</div></div>
-          </div>
+.chatInput .input{
+  flex: 1 1 280px;
+  min-width: 220px;
+  border-radius: 18px;
+  padding: 12px 14px;
+}
 
-          <div class="loveFooter">
-            <div class="tiny muted">Since <span id="loveStartPretty">—</span> (EST)</div>
-            <div class="pill">Next anniversary in <b id="loveNextAnniv">—</b></div>
-          </div>
-        </div>
-      </div>
-    </section>
+.filePick{
+  max-width: 220px;
+  padding:10px;
+  border-radius: 16px;
+  border:1px dashed rgba(255,255,255,.45);
+  background: rgba(255,255,255,.18);
+}
 
-    <!-- CALENDAR -->
-    <section id="tab-calendar" class="panel hidden">
-      <h3>Calendar <span class="tiny muted">🗓️</span></h3>
+/* ===== Saved grid + Draw gallery ===== */
+.savedGrid{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap:12px;
+}
+.savedCard{
+  border-radius: 22px;
+  background: rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.30);
+  padding:10px;
+  display:grid;
+  gap:10px;
+  position:relative;
+  box-shadow: 0 12px 24px rgba(0,0,0,.06);
+  transition: transform .10s ease, filter .12s ease;
+}
+.savedCard:hover{filter: brightness(1.02)}
+.savedCard:active{transform: translateY(1px)}
+.savedThumb{
+  width:100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+  object-fit:cover;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.20);
+}
+.selBadge{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:30px;
+  height:30px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  background: rgba(0,0,0,.55);
+  color:white;
+  font-weight:1000;
+  border:1px solid rgba(255,255,255,.18);
+}
+.savedCard.selected{
+  outline: 3px solid rgba(255, 92, 169, .70);
+  box-shadow: 0 14px 34px rgba(255, 92, 169, .20);
+}
 
-      <div class="calendarForm">
-        <input id="evtTitle" type="text" placeholder="Event title" />
-        <input id="evtDate" type="date" />
-        <input id="evtTime" type="time" />
-        <input id="evtNotes" type="text" placeholder="Notes (optional)" />
-        <button id="evtAddBtn" class="btn primary">Add</button>
-      </div>
+/* ===== Draw ===== */
+.drawBar{display:grid; gap:10px; margin-bottom:10px}
+.drawRow{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
+.drawGroup{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.drawBtns{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
 
-      <div id="calMsg" class="tiny muted"></div>
-      <div id="eventsList" class="eventsList"></div>
-    </section>
+.drawTextBox{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  padding:10px;
+  border-radius: 18px;
+  border:1px solid rgba(255,255,255,.32);
+  background: rgba(255,255,255,.18);
+  box-shadow: 0 10px 22px rgba(0,0,0,.05);
+}
+.tip{opacity:.85}
 
-    <!-- ADMIN -->
-    <section id="tab-admin" class="panel hidden">
-      <div class="rowBetween">
-        <h3>Admin 🛡️</h3>
-        <div class="adminActions">
-          <button id="btnRefreshUsers" class="btn">Refresh Pending</button>
-          <button id="btnClearChat" class="btn primary">Clear Chat</button>
-        </div>
-      </div>
+.canvasWrap{
+  border-radius: 22px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.30);
+  background: rgba(255,255,255,.14);
+  box-shadow: 0 14px 28px rgba(0,0,0,.08);
+}
+#drawCanvas{
+  width:100%;
+  height:auto;
+  display:block;
+  background:#fff;
+  touch-action:none;
+}
 
-      <div id="adminMsg" class="tiny muted"></div>
+/* fullscreen draw */
+#canvasWrap:fullscreen{
+  background: #111;
+  border-radius:0;
+  border:none;
+}
+#canvasWrap:fullscreen #drawCanvas{
+  width:100%;
+  height:100%;
+  background:#fff;
+}
 
-      <h4>Pending approvals</h4>
-      <div id="pendingList" class="list"></div>
+/* ===== Love tab ===== */
+.loveHero{
+  border-radius: 22px;
+  border:1px solid rgba(255,255,255,.28);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.35), rgba(255,255,255,0) 55%),
+    linear-gradient(135deg, rgba(255,122,190,.55), rgba(255,220,240,.35));
+  overflow:hidden;
+  box-shadow: 0 18px 44px rgba(255, 92, 169, .18);
+}
+.loveCard{
+  margin-top:12px;
+  padding:18px;
+  border-radius: 22px;
+  background: rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.30);
+  text-align:center;
+  box-shadow: 0 12px 24px rgba(0,0,0,.06);
+}
+.loveBig{font-size:44px;font-weight:1000}
 
-      <h4 style="margin-top:16px;">All accounts</h4>
-      <div id="accountsList" class="list"></div>
-    </section>
+/* ===== Calendar ===== */
+.eventRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.20);
+  border:1px solid rgba(255,255,255,.28);
+}
+.eventRow small{color:var(--muted); display:block; margin-top:2px}
+.eventActions{display:flex; gap:8px; flex-wrap:wrap}
 
-  </main>
+/* ===== Fullscreen image viewer ===== */
+.fs{
+  position:fixed;
+  inset:0;
+  background: rgba(0,0,0,.92);
+  z-index:9999;
+  display:grid;
+  grid-template-rows: auto 1fr auto;
+}
+.fsTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 14px;
+  background: linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,0));
+}
+.fsTitle{color: rgba(255,255,255,.88); font-weight:1000;}
+.fsTopRight{display:flex; gap:10px; align-items:center}
+.fsBtn{
+  padding:10px 12px;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.12);
+  color:white;
+  cursor:pointer;
+  font-weight:1000;
+  transition: transform .08s ease, filter .12s ease;
+}
+.fsBtn:hover{filter: brightness(1.03)}
+.fsBtn:active{transform: translateY(1px)}
+.fsBtn.primary{
+  background: linear-gradient(180deg, var(--hot1), var(--hot2));
+  border:none;
+}
+.fsBody{
+  display:grid;
+  place-items:center;
+  padding: 10px 14px;
+}
+.fsImg{width:100%; height:100%; object-fit:contain;}
+.fsHint{
+  padding: 10px 14px 14px;
+  color: rgba(255,255,255,.72);
+  text-align:center;
+}
 
-  <!-- FULLSCREEN IMAGE MODAL -->
-  <div id="imgModal" class="modal hidden">
-    <div class="modalInner">
-      <div class="modalHeader">
-        <div id="fsTitle" class="modalTitle">Photo</div>
-        <button id="closeModal" class="btn ghost">✕</button>
-      </div>
-
-      <img id="modalImg" class="modalImg" alt="full" />
-
-      <div class="modalActions">
-        <button id="saveChatBtn" class="btn">💾 Save</button>
-        <button id="saveDeviceBtn" class="btn primary">⬇ Download</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="./app.js"></script>
-</body>
-</html>
+/* ===== Mobile tweaks ===== */
+@media (max-width: 520px){
+  .card{padding:16px}
+  .panel{padding:14px}
+  .chatBox{max-height: 55vh}
+  .msgBubble{max-width: 92%}
+  .chatInput{padding:10px}
+  .tabs{gap:8px}
+  .tab{padding:9px 10px}
+}
