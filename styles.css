@@ -6,8 +6,6 @@
   --text:#3b1b2a;
   --muted: rgba(59,27,42,.7);
   --shadow: 0 18px 60px rgba(255, 80, 160, .25);
-  --shadow2: 0 24px 70px rgba(255, 80, 160, .20);
-  --radius:22px;
 }
 
 *{box-sizing:border-box}
@@ -28,6 +26,7 @@ body{
   justify-content:space-between;
   padding:16px 18px;
 }
+.topbarRight{display:flex; gap:10px; align-items:center}
 
 .brand{display:flex; gap:12px; align-items:center}
 .logo{
@@ -38,15 +37,14 @@ body{
   border-radius:14px;
   box-shadow: var(--shadow);
 }
-
-.title{font-weight:900}
+.title{font-weight:800}
 .subtitle{font-size:12px; color:var(--muted)}
 
 .card{
   width:min(720px, calc(100% - 24px));
   margin: 18px auto;
   padding:18px;
-  border-radius:var(--radius);
+  border-radius:22px;
   background: var(--card);
   border:1px solid var(--stroke);
   box-shadow: var(--shadow);
@@ -56,10 +54,21 @@ body{
 .muted{color:var(--muted)}
 .tiny{font-size:12px}
 .hidden{display:none !important;}
+.mt{margin-top:16px}
+
+.pill{
+  padding:10px 12px;
+  border-radius:999px;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.32);
+  cursor:pointer;
+  font-weight:700;
+}
 
 .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
 .input{
-  width:100%;
+  flex:1;
+  min-width:220px;
   padding:12px 12px;
   border-radius:16px;
   border:1px solid var(--stroke);
@@ -78,7 +87,7 @@ body{
   border:1px solid var(--stroke);
   background: rgba(255,255,255,.32);
   cursor:pointer;
-  font-weight:800;
+  font-weight:700;
 }
 .btn.primary{
   background: linear-gradient(180deg, #ff8ac3, #ff5ca9);
@@ -90,23 +99,14 @@ body{
 .msg{margin-top:10px; font-size:13px}
 
 .app{
-  width:min(1200px, calc(100% - 24px));
+  width:min(980px, calc(100% - 24px));
   margin: 10px auto 30px;
-}
-
-.pendingBanner{
-  margin: 10px 0 14px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(255,255,255,.30);
-  border: 1px solid var(--stroke);
-  box-shadow: var(--shadow);
 }
 
 .tabs{
   display:flex; gap:10px; flex-wrap:wrap;
   padding:12px;
-  border-radius:var(--radius);
+  border-radius:22px;
   background: rgba(255,255,255,.22);
   border:1px solid var(--stroke);
   box-shadow: var(--shadow);
@@ -118,21 +118,21 @@ body{
   padding:10px 12px;
   border-radius:14px;
   background: rgba(255,255,255,.28);
-  font-weight:900;
+  font-weight:800;
 }
 .tab.active{
   background: linear-gradient(180deg, #ff8ac3, #ff5ca9);
   color:white;
 }
+
 .panel{
   margin-top:12px;
   padding:16px;
-  border-radius:var(--radius);
+  border-radius:22px;
   background: rgba(255,255,255,.26);
   border:1px solid var(--stroke);
-  box-shadow: var(--shadow2);
+  box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
-  min-height: calc(100vh - 220px);
 }
 
 .panelTop{
@@ -149,29 +149,38 @@ body{
   align-items:center;
 }
 
-.statusChip{
-  padding: 8px 12px;
-  border-radius: 999px;
-  border:1px solid var(--stroke);
-  background: rgba(255,255,255,.30);
+/* Pending Banner (no pending page) */
+.pendingBanner{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 16px;
+  border-radius:18px;
+  background: rgba(255, 255, 255, .40);
+  border: 1px solid rgba(255,255,255,.55);
+  box-shadow: var(--shadow);
+  margin-bottom:12px;
+}
+.pendingBadge{
+  width:38px; height:38px;
+  display:grid; place-items:center;
+  border-radius:999px;
+  background: rgba(255, 92, 169, .18);
+  border: 1px solid rgba(255, 92, 169, .35);
   font-weight:900;
 }
 
-/* Admin list */
-.adminActions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-.list{margin-top:12px; display:grid; gap:10px}
-.item{
-  display:flex; align-items:center; justify-content:space-between;
-  gap:10px; padding:12px; border-radius:16px;
-  background: rgba(255,255,255,.28);
-  border:1px solid var(--stroke);
+/* Locked state for tabs/panels when pending */
+.locked{
+  opacity:.55;
+  filter:saturate(.6);
+  pointer-events:none;
 }
-.item small{color:var(--muted)}
-.item .actions{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
 
 /* Chat */
 .chatBox{
-  max-height: 420px;
+  max-height: 380px;
   overflow-y: auto;
   padding: 12px;
   border-radius: 16px;
@@ -191,9 +200,9 @@ body{
 }
 .msgMeta{
   font-size:12px;
-  opacity:.9;
+  opacity:.85;
   margin-bottom:6px;
-  font-weight:900;
+  font-weight:800;
 }
 .msgMe{
   align-self:flex-end;
@@ -201,14 +210,13 @@ body{
   color:white;
 }
 .msgOther{align-self:flex-start;}
-
 .chatInput{
   display:flex;
   gap:10px;
   flex-wrap:wrap;
   align-items:center;
 }
-.filePick{max-width:240px}
+.filePick{max-width:220px}
 
 .snap{cursor:pointer;}
 .snap::after{
@@ -217,7 +225,7 @@ body{
   right:10px;
   bottom:-18px;
   font-size:12px;
-  color:rgba(255,255,255,.95);
+  color:rgba(255,255,255,.9);
 }
 .opened{opacity:.65; cursor:default;}
 .opened::after{
@@ -229,11 +237,11 @@ body{
   color:rgba(59,27,42,.7);
 }
 
-/* Saved grid (also used for Draw gallery) */
+/* Saved grid (also Draw gallery) */
 .savedGrid{
   margin-top:12px;
   display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap:12px;
 }
 .savedCard{
@@ -276,15 +284,13 @@ body{
 .drawRow{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
 .drawGroup{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
 .drawBtns{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-
 .select{
   padding:10px 12px;
   border-radius:14px;
   border:1px solid var(--stroke);
   background: rgba(255,255,255,.32);
-  font-weight:900;
+  font-weight:800;
 }
-
 .drawTextBox{
   display:flex;
   gap:10px;
@@ -296,7 +302,6 @@ body{
   background: rgba(255,255,255,.22);
 }
 .tip{opacity:.8}
-
 .canvasWrap{
   border-radius:18px;
   overflow:hidden;
@@ -310,7 +315,6 @@ body{
   background:#fff;
   touch-action:none;
 }
-.mt{margin-top:16px}
 
 /* fullscreen draw */
 #canvasWrap:fullscreen{
@@ -323,6 +327,131 @@ body{
   height:100%;
   background:#fff;
 }
+
+/* Love (My Love vibe) */
+.loveHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.loveTitle{margin:0}
+.loveBtns{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+
+.loveHero{
+  margin-top:12px;
+  border-radius:22px;
+  border:1px solid var(--stroke);
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.35), rgba(255,255,255,0) 55%),
+    linear-gradient(135deg, rgba(255,122,190,.55), rgba(255,220,240,.35));
+  box-shadow: var(--shadow);
+  min-height: 260px;
+}
+.loveHeroOverlay{
+  padding:18px;
+  background: rgba(255, 255, 255, .18);
+  backdrop-filter: blur(10px);
+  min-height: 260px;
+  display:grid;
+  gap:14px;
+}
+.loveNamesRow{display:flex; justify-content:flex-start}
+.loveNames{
+  font-weight:900;
+  font-size:18px;
+  background: rgba(255,255,255,.28);
+  border: 1px solid rgba(255,255,255,.40);
+  padding:8px 12px;
+  border-radius:999px;
+  width:max-content;
+}
+
+.loveMainStat{
+  display:grid;
+  place-items:center;
+  padding:18px;
+  border-radius:18px;
+  background: rgba(255,255,255,.28);
+  border:1px solid rgba(255,255,255,.40);
+}
+.loveYMD{
+  font-size:22px;
+  font-weight:950;
+  text-align:center;
+}
+.loveSub{font-size:12px; color:rgba(59,27,42,.75)}
+
+.loveGrid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap:10px;
+}
+.loveMini{
+  padding:14px;
+  border-radius:16px;
+  background: rgba(255,255,255,.24);
+  border:1px solid rgba(255,255,255,.35);
+  text-align:center;
+}
+.loveMiniNum{font-size:18px; font-weight:900}
+.loveMiniLbl{font-size:12px; color:rgba(59,27,42,.7)}
+
+.loveFooter{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.loveNext{
+  padding:10px 12px;
+  border-radius:16px;
+  background: rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.35);
+  text-align:right;
+}
+.loveNextNum{font-weight:950}
+
+/* Calendar */
+.calForm{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-top:10px;
+}
+.eventsList{
+  margin-top:12px;
+  display:grid;
+  gap:10px;
+}
+.eventRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  border-radius:16px;
+  background: rgba(255,255,255,.28);
+  border:1px solid var(--stroke);
+}
+.eventRow small{color:var(--muted)}
+.eventActions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+
+/* Admin list */
+.adminActions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.list{margin-top:12px; display:grid; gap:10px}
+.item{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; padding:12px; border-radius:16px;
+  background: rgba(255,255,255,.28);
+  border:1px solid var(--stroke);
+}
+.item small{color:var(--muted)}
+.item .actions{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
 
 /* FULLSCREEN IMAGE VIEWER */
 .fs{
@@ -340,7 +469,7 @@ body{
   gap:10px;
   padding:12px 14px;
 }
-.fsTitle{color: rgba(255,255,255,.85); font-weight:900;}
+.fsTitle{color: rgba(255,255,255,.85); font-weight:800;}
 .fsTopRight{display:flex; gap:10px; align-items:center}
 .fsBtn{
   padding:10px 12px;
@@ -349,7 +478,7 @@ body{
   background: rgba(255,255,255,.12);
   color:white;
   cursor:pointer;
-  font-weight:900;
+  font-weight:800;
 }
 .fsBtn.primary{
   background: linear-gradient(180deg, #ff8ac3, #ff5ca9);
@@ -367,201 +496,6 @@ body{
   text-align:center;
 }
 
-/* LOVE */
-.loveTop{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:10px;
-  flex-wrap:wrap;
+@media (max-width: 720px){
+  .loveGrid{grid-template-columns: repeat(2, minmax(140px, 1fr));}
 }
-.loveBtns{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-
-.loveHero{
-  margin-top:10px;
-  padding:18px;
-  border-radius:22px;
-  border:1px solid rgba(255,255,255,.30);
-  box-shadow: var(--shadow);
-  overflow:hidden;
-  position:relative;
-
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-
-  min-height: 420px;
-  background-image:
-    radial-gradient(circle at 30% 20%, rgba(255,255,255,.35), rgba(255,255,255,0) 55%),
-    linear-gradient(135deg, rgba(255,122,190,.55), rgba(255,220,240,.35));
-}
-.loveOverlay{
-  position:absolute;
-  inset:0;
-  padding:18px;
-  display:grid;
-  grid-template-rows: auto 1fr auto auto;
-  gap:14px;
-  background: linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.05));
-}
-.loveTitleRow{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap}
-.loveNames{font-weight:1000; font-size:18px}
-.loveSince{font-weight:900; font-size:12px; color:rgba(59,27,42,.75)}
-.loveMain{
-  display:grid;
-  place-items:center;
-  background: rgba(255,255,255,.22);
-  border: 1px solid rgba(255,255,255,.30);
-  border-radius:18px;
-  padding:18px;
-}
-.loveTogether{font-size:28px; font-weight:1000; text-align:center}
-.loveStats{
-  display:grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap:10px;
-}
-.loveStat{
-  background: rgba(255,255,255,.22);
-  border: 1px solid rgba(255,255,255,.30);
-  border-radius:16px;
-  padding:12px;
-  text-align:center;
-}
-.loveNum{font-size:22px; font-weight:1000}
-.loveFooter{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-  background: rgba(255,255,255,.22);
-  border: 1px solid rgba(255,255,255,.30);
-  border-radius:16px;
-  padding:12px 14px;
-}
-.loveNext{font-weight:1000}
-
-/* CALENDAR */
-.calWrap{
-  display:grid;
-  grid-template-columns: 1fr 340px;
-  gap:12px;
-  margin-top:10px;
-}
-.calHeader{
-  grid-column: 1 / 2;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:10px;
-  border-radius:18px;
-  background: rgba(255,255,255,.22);
-  border: 1px solid var(--stroke);
-}
-.calTitle{font-weight:1000}
-
-.calGridHead{
-  grid-column: 1 / 2;
-  display:grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap:8px;
-  font-weight:1000;
-  opacity:.85;
-  padding:0 6px;
-}
-.calGrid{
-  grid-column: 1 / 2;
-  display:grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap:8px;
-}
-.calCell{
-  border-radius:16px;
-  padding:10px;
-  min-height:84px;
-  background: rgba(255,255,255,.20);
-  border:1px solid rgba(255,255,255,.28);
-  cursor:pointer;
-  position:relative;
-}
-.calCell.mutedCell{opacity:.55}
-.calCell .dayNum{font-weight:1000}
-.calCell .dot{
-  position:absolute;
-  bottom:10px;
-  right:10px;
-  width:10px;height:10px;
-  border-radius:999px;
-  background: rgba(255, 92, 169, .9);
-  box-shadow: 0 0 0 3px rgba(255,255,255,.25);
-}
-.calCell.active{
-  outline: 3px solid rgba(255, 92, 169, .75);
-  box-shadow: 0 10px 30px rgba(255, 92, 169, .20);
-}
-
-.calSide{
-  grid-column: 2 / 3;
-  grid-row: 1 / span 3;
-  border-radius:18px;
-  background: rgba(255,255,255,.22);
-  border: 1px solid var(--stroke);
-  padding:12px;
-  display:grid;
-  grid-template-rows: auto 1fr;
-  gap:10px;
-}
-.calSelected{font-weight:1000}
-.calEvents{display:grid; gap:10px; overflow:auto; max-height:520px}
-.calEvent{
-  border-radius:16px;
-  background: rgba(255,255,255,.26);
-  border: 1px solid rgba(255,255,255,.30);
-  padding:10px;
-}
-.calEventTop{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-}
-.calEventTitle{font-weight:1000}
-.calEventMeta{font-size:12px; color:rgba(59,27,42,.75); font-weight:900}
-.calEventNotes{margin-top:6px; font-size:13px}
-.calEventActions{margin-top:10px; display:flex; gap:8px; flex-wrap:wrap}
-
-@media (max-width: 980px){
-  .calWrap{grid-template-columns: 1fr; }
-  .calSide{grid-column: 1 / 2; grid-row:auto;}
-  .loveStats{grid-template-columns: repeat(2, 1fr);}
-}
-
-/* MODAL */
-.modal{
-  position:fixed;
-  inset:0;
-  background: rgba(0,0,0,.55);
-  z-index: 9998;
-  display:grid;
-  place-items:center;
-  padding: 16px;
-}
-.modalCard{
-  width:min(640px, 100%);
-  border-radius:22px;
-  background: rgba(255,255,255,.92);
-  border: 1px solid rgba(255,255,255,.60);
-  box-shadow: 0 30px 80px rgba(0,0,0,.25);
-  overflow:hidden;
-}
-.modalTop{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  padding: 14px 14px 0;
-}
-.modalTitle{font-weight:1000; font-size:18px}
-.modalBody{padding:14px; display:grid; gap:10px}
-.modalBottom{padding: 0 14px 14px; display:flex; justify-content:flex-end}
