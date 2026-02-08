@@ -161,19 +161,35 @@ const loveBgPick = document.getElementById("loveBgPick");
 // ===== Helpers =====
 function showAuth() {
   authView?.classList.remove("hidden");
+  pendingView?.classList.add("hidden");
   appView?.classList.add("hidden");
   btnSignOut?.classList.add("hidden");
 }
+
+function showPending(msg = "Pending approval 🌸") {
+  authView?.classList.add("hidden");
+  pendingView?.classList.remove("hidden");
+  appView?.classList.add("hidden");
+  btnSignOut?.classList.add("hidden");
+
+  // optional: if you have a pending message element
+  const p = document.getElementById("pendingMsg");
+  if (p) p.textContent = msg;
+}
+
 function showApp() {
   authView?.classList.add("hidden");
+  pendingView?.classList.add("hidden");
   appView?.classList.remove("hidden");
   btnSignOut?.classList.remove("hidden");
 }
+
 function setMsg(el, text, ok = false) {
   if (!el) return;
   el.textContent = text || "";
   el.style.color = ok ? "#1f7a44" : "#8a1b3d";
 }
+
 function esc(s = "") {
   return String(s).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;",
@@ -183,6 +199,7 @@ function esc(s = "") {
     "'": "&#39;"
   }[c]));
 }
+
 
 function normalizeUsername(raw) {
   const u = String(raw || "").trim().toLowerCase();
