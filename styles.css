@@ -731,3 +731,90 @@ body{
   font-size: 14px;
   opacity: .35;
 }
+/* ===============================
+   GLOBAL INPUT STYLE — CUTE MODE
+   Applies to ALL inputs site-wide
+   =============================== */
+
+input,
+textarea,
+select {
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 140, 190, .45);
+  background: rgba(255,255,255,.85);
+  font-size: 14px;
+  font-weight: 600;
+  color: #8a1b3d;
+  box-shadow:
+    inset 0 4px 10px rgba(255,255,255,.8),
+    0 6px 18px rgba(255, 92, 169, .12);
+  transition: all .18s ease;
+}
+
+/* Textareas still feel round but flexible */
+textarea {
+  height: auto;
+  min-height: 46px;
+  padding: 12px 18px;
+  border-radius: 22px;
+  resize: vertical;
+}
+
+/* Select dropdown arrow fix */
+select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #ff7fb8 50%),
+    linear-gradient(135deg, #ff7fb8 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 12px) 55%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+/* Placeholder = soft pink */
+input::placeholder,
+textarea::placeholder {
+  color: rgba(255, 92, 169, .55);
+  font-weight: 500;
+}
+
+/* Focus glow */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #ff7fb8;
+  box-shadow:
+    0 0 0 5px rgba(255, 127, 184, .28),
+    inset 0 4px 12px rgba(255,255,255,.9);
+}
+
+/* Disabled state */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* File input button (cute fix) */
+input[type="file"] {
+  padding: 8px;
+  height: auto;
+  border-radius: 22px;
+  background: rgba(255,255,255,.65);
+}
+
+/* Optional tiny heart accent on hover */
+input:hover,
+textarea:hover,
+select:hover {
+  box-shadow:
+    inset 0 4px 10px rgba(255,255,255,.9),
+    0 10px 24px rgba(255, 92, 169, .18);
+}
