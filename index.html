@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Our Little Hub 💗</title>
   <link rel="stylesheet" href="styles.css" />
-  <!-- Optional: stops favicon 404 -->
-  <link rel="icon" href="data:," />
 </head>
 <body>
+
+  <!-- TOP BAR -->
   <header class="topbar">
     <div class="brand">
       <div class="logo">💗</div>
@@ -17,13 +17,17 @@
         <div class="subtitle">private + cute</div>
       </div>
     </div>
+
     <button id="btnSignOut" class="pill hidden">Sign out</button>
   </header>
 
-  <!-- AUTH -->
+  <!-- AUTH VIEW -->
   <main id="authView" class="card">
     <h2>Welcome 💕</h2>
-    <p class="muted">Sign in or create an account. New accounts must be approved.</p>
+    <p class="muted">
+      Create an account with a <b>username + password</b>.<br/>
+      New accounts require approval.
+    </p>
 
     <div class="row">
       <input id="username" class="input" type="text" placeholder="Username" autocomplete="username">
@@ -35,36 +39,52 @@
       <button id="btnSignUp" class="btn">Sign Up</button>
     </div>
 
-    <div class="muted tiny tip">
-      Username rules: 3–20 chars, letters/numbers/._- (no spaces).
+    <div class="hint tiny muted">
+      Username rules: 3–20 chars, letters/numbers/._- only
     </div>
 
     <div id="authMsg" class="msg"></div>
   </main>
 
-  <!-- PENDING -->
+  <!-- PENDING VIEW -->
   <main id="pendingView" class="card hidden">
-    <h2>Pending approval 🌸</h2>
-    <p class="muted">
-      Your account is created, but not approved yet.<br/>
-      Once approved, this page will unlock automatically.
-    </p>
+    <div class="pendingTop">
+      <div>
+        <h2>Pending approval 🌸</h2>
+        <p class="muted">
+          Your account exists, but it’s not approved yet.<br/>
+          Once approved, this page will unlock automatically.
+        </p>
+      </div>
+
+      <button id="pendingSignOut" class="btn">Sign out</button>
+    </div>
+
     <div class="heartbox">✨ 💗 ✨</div>
+    <div class="muted tiny pendingTip">
+      If you just signed up, ask the admin to approve your username in the Admin tab.
+    </div>
   </main>
 
-  <!-- APP -->
+  <!-- APP VIEW -->
   <main id="appView" class="app hidden">
+    <!-- TABS -->
     <nav class="tabs">
       <button class="tab active" data-tab="chat">💬 Chat</button>
       <button class="tab" data-tab="saved">💾 Saved</button>
       <button class="tab" data-tab="draw">🎨 Draw</button>
+      <button class="tab" data-tab="love">💞 Love</button>
       <button class="tab" data-tab="calendar">📅 Calendar</button>
       <button class="tab adminOnly hidden" data-tab="admin">🛡️ Admin</button>
     </nav>
 
     <!-- CHAT -->
     <section class="panel" id="tab-chat">
-      <h3>Chat 💬</h3>
+      <div class="panelHeader">
+        <h3>Chat 💬</h3>
+        <p class="muted tiny">Tap any picture message bubble to open it fullscreen.</p>
+      </div>
+
       <div id="chatBox" class="chatBox"></div>
 
       <div class="chatInput">
@@ -74,8 +94,6 @@
         <input id="imgPick" type="file" accept="image/*" class="filePick" />
         <button id="sendImgBtn" class="btn">Send Pic 📸</button>
       </div>
-
-      <p class="muted tiny">Tap a pic message to open it fullscreen.</p>
     </section>
 
     <!-- SAVED -->
@@ -83,7 +101,7 @@
       <div class="panelTop">
         <div>
           <h3>Saved 💾</h3>
-          <p class="muted">Pics you saved in chat show up here for both of you.</p>
+          <p class="muted tiny">Pics you save in the fullscreen viewer appear here for both of you.</p>
         </div>
 
         <div class="panelActions">
@@ -98,7 +116,12 @@
 
     <!-- DRAW -->
     <section class="panel hidden" id="tab-draw">
-      <h3>Draw 🎨</h3>
+      <div class="panelHeader">
+        <h3>Draw 🎨</h3>
+        <p class="muted tiny">
+          Brushes + fill bucket + text tool + symmetry + undo/redo. Save to shared gallery 💗
+        </p>
+      </div>
 
       <div class="drawBar">
         <div class="drawRow">
@@ -147,7 +170,7 @@
           </div>
 
           <div class="drawGroup">
-            <label class="muted tiny">Fill Tolerance</label>
+            <label class="muted tiny">Fill Tol</label>
             <input id="fillTol" type="range" min="0" max="80" value="24"/>
           </div>
         </div>
@@ -187,23 +210,76 @@
         <canvas id="drawCanvas" width="1200" height="700"></canvas>
       </div>
 
-      <p class="muted tiny">
-        Tool tips: Bucket fills an area based on tolerance. Text: type then tap canvas. 💗
-      </p>
-
       <h4 class="mt">Gallery 💗</h4>
       <div id="drawGallery" class="savedGrid"></div>
     </section>
 
+    <!-- LOVE -->
+    <section class="panel hidden" id="tab-love">
+      <div class="panelHeader">
+        <h3>Love 💞</h3>
+        <p class="muted tiny">My Love app vibe — cute stats + anniversary countdown.</p>
+      </div>
+
+      <div class="loveHero" id="loveHero">
+        <div class="loveHeroTop">
+          <div class="loveNames" id="loveNames">Us 💗</div>
+          <div class="loveActions">
+            <input id="loveBgPick" type="file" accept="image/*" class="hidden" />
+            <button id="loveSettingsBtn" class="btn">Set Photo</button>
+            <button id="loveShareBtn" class="btn primary">Share</button>
+          </div>
+        </div>
+
+        <div class="loveBigRow">
+          <div class="loveBigStat">
+            <div class="loveBig" id="loveYMD">—</div>
+            <div class="muted tiny">together</div>
+          </div>
+        </div>
+
+        <div class="loveMiniRow">
+          <div class="loveMini">
+            <div class="loveMiniNum" id="loveMonths">—</div>
+            <div class="muted tiny">months</div>
+          </div>
+          <div class="loveMini">
+            <div class="loveMiniNum" id="loveWeeks">—</div>
+            <div class="muted tiny">weeks</div>
+          </div>
+          <div class="loveMini">
+            <div class="loveMiniNum" id="loveDays2">—</div>
+            <div class="muted tiny">days</div>
+          </div>
+          <div class="loveMini">
+            <div class="loveMiniNum" id="loveHours">—</div>
+            <div class="muted tiny">hours</div>
+          </div>
+        </div>
+
+        <div class="loveFooter">
+          <div class="muted tiny">Since <b id="loveStartPretty">June 18, 2024</b> (EST)</div>
+          <div class="loveNext">
+            <div class="muted tiny">Next anniversary in</div>
+            <div class="loveNextNum" id="loveNextAnniv">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- CALENDAR -->
     <section class="panel hidden" id="tab-calendar">
-      <!-- app.js will build UI here -->
+      <!-- app.js builds the calendar UI inside this section -->
+      <h3>Calendar 📅</h3>
+      <p class="muted tiny">Loading calendar…</p>
     </section>
 
     <!-- ADMIN -->
     <section class="panel hidden" id="tab-admin">
-      <h3>Admin 🛡️</h3>
-      <p class="muted">Approve/deny accounts + manage users.</p>
+      <div class="panelHeader">
+        <h3>Admin 🛡️</h3>
+        <p class="muted tiny">Approve/deny accounts + manage users + clear chat.</p>
+      </div>
 
       <div class="adminBox">
         <div class="adminActions">
@@ -237,7 +313,9 @@
       <img id="modalImg" class="fsImg" alt="photo"/>
     </div>
 
-    <div class="fsHint muted tiny">Saved adds it to the Saved tab for both of you 💗</div>
+    <div class="fsHint muted tiny">
+      Save adds it to the Saved tab for both of you 💗
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>
