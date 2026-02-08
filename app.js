@@ -1549,27 +1549,27 @@ function setPendingUI(pending) {
 }
 
 // ===== Start listeners only once =====
+// Auth gate (ONLY show Pending until approved; do NOT load any listeners early)
 let listenersStarted = false;
 
-// Auth gate
 onAuthStateChanged(auth, async (user) => {
+  // Always stop UI from showing the app by default
   if (!user) {
     listenersStarted = false;
-    window.__isAdmin = false;
-    showAuth();
+    btnSignOut?.classList.add("hidden");
+    show(authView);
     return;
   }
 
-  showApp();
+  // Signed in: still don't show app until approved
+  btnSignOut?.classList.add("hidden");
 
   // Ensure user doc exists
   const userRef = doc(db, "users", user.uid);
-  let snap = await getDoc(userRef).catch(()=>null);
+  const snap = await getDoc(userRef);
 
-  if (!snap || !snap.exists()) {
-    // Backfill doc if missing (rare)
+  if (!snap.exists()) {
     await setDoc(userRef, {
-      username: (user.email || "").split("@")[0] || "",
       email: user.email || "",
       approved: false,
       isAdmin: false,
@@ -1577,48 +1577,45 @@ onAuthStateChanged(auth, async (user) => {
       nickname: "",
       createdAt: serverTimestamp()
     });
-    snap = await getDoc(userRef);
-  }
-
-  const data = snap.data() || {};
-  const pending = !!data.denied || !data.approved;
-  const isAdmin = !!data.isAdmin;
-
-  window.__isAdmin = isAdmin;
-
-  // Admin tab visibility
-  if (isAdmin) adminTabBtn?.classList.remove("hidden");
-  else adminTabBtn?.classList.add("hidden");
-
-  // Love name label
-  if (loveNamesEl) loveNamesEl.textContent = "Us 💗";
-
-  // Pending UI behavior
-  setPendingUI(pending);
-
-  // Start user map always (safe)
-  startUsersRealtime();
-
-  // If pending, do NOT start data listeners (prevents permission spam)
-  if (pending) {
-    listenersStarted = false;
+    show(pendingView);
     return;
   }
 
-  // Approved: start everything once
-  if (listenersStarted) return;
-  listenersStarted = true;
+  const data = snap.data() || {};
 
-  console.log("Auth ready, starting Firestore listeners");
+  // Denied or not approved -> PENDING ONLY (no tabs, no app, no signout)
+  if (data.denied || !data.approved) {
+    show(pendingView);
+    return;
+  }
 
-  startChatRealtime();
-  startSavedRealtime();
-  startDrawingBoard();
-  startDrawGallery();
-  startEventsRealtime(isAdmin);
+  // Approved -> show full app + signout
+  show(appView);
+  btnSignOut?.classList.remove("hidden");
 
-  if (isAdmin) {
-    loadPendingUsers();
-    startAccountsRealtime(true);
+  const isAdmin = !!data.isAdmin;
+  window.__isAdmin = isAdmin;
+
+  // Show admin tab only for admins
+  if (isAdmin) adminTabBtn?.classList.remove("hidden");
+  else adminTabBtn?.classList.add("hidden");
+
+  // Start listeners ONE time only, after approval
+  if (!listenersStarted) {
+    listenersStarted = true;
+
+    startUsersRealtime();
+    startChatRealtime();
+    startSavedRealtime();
+    startDrawingBoard();
+    startDrawGallery();
+
+    // Calendar listener (ONLY if you have it)
+    // startEventsRealtime?.();
+
+    if (isAdmin) {
+      loadPendingUsers();
+      startAccountsRealtime(true);
+    }
   }
 });
