@@ -173,6 +173,9 @@ function showAuth(msg = "") {
   if (msg) setMsg(authMsg, msg, false);
 }
 
+const pendingView = document.getElementById("pendingView");
+
+
 function showPending(msg = "") {
   show(pendingView);
   const el = document.getElementById("pendingMsg");
