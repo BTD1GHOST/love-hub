@@ -7,8 +7,6 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-
-  <!-- TOP BAR -->
   <header class="topbar">
     <div class="brand">
       <div class="logo">💗</div>
@@ -17,17 +15,12 @@
         <div class="subtitle">private + cute</div>
       </div>
     </div>
-
-    <button id="btnSignOut" class="pill hidden">Sign out</button>
   </header>
 
-  <!-- AUTH VIEW -->
+  <!-- AUTH -->
   <main id="authView" class="card">
     <h2>Welcome 💕</h2>
-    <p class="muted">
-      Create an account with a <b>username + password</b>.<br/>
-      New accounts require approval.
-    </p>
+    <p class="muted">Sign in or create an account. New accounts must be approved.</p>
 
     <div class="row">
       <input id="username" class="input" type="text" placeholder="Username" autocomplete="username">
@@ -39,36 +32,20 @@
       <button id="btnSignUp" class="btn">Sign Up</button>
     </div>
 
-    <div class="hint tiny muted">
-      Username rules: 3–20 chars, letters/numbers/._- only
-    </div>
-
     <div id="authMsg" class="msg"></div>
   </main>
 
-  <!-- PENDING VIEW -->
-  <main id="pendingView" class="card hidden">
-    <div class="pendingTop">
-      <div>
-        <h2>Pending approval 🌸</h2>
-        <p class="muted">
-          Your account exists, but it’s not approved yet.<br/>
-          Once approved, this page will unlock automatically.
-        </p>
-      </div>
-
-      <button id="pendingSignOut" class="btn">Sign out</button>
-    </div>
-
-    <div class="heartbox">✨ 💗 ✨</div>
-    <div class="muted tiny pendingTip">
-      If you just signed up, ask the admin to approve your username in the Admin tab.
-    </div>
-  </main>
-
-  <!-- APP VIEW -->
+  <!-- APP -->
   <main id="appView" class="app hidden">
-    <!-- TABS -->
+
+    <!-- Pending banner (small notice instead of full screen) -->
+    <div id="pendingBanner" class="pendingBanner hidden">
+      <div>
+        <b>Pending approval</b> — your account exists, but it’s not approved yet.
+      </div>
+      <div class="muted tiny">Ask the owner to approve you in Admin 💗</div>
+    </div>
+
     <nav class="tabs">
       <button class="tab active" data-tab="chat">💬 Chat</button>
       <button class="tab" data-tab="saved">💾 Saved</button>
@@ -80,9 +57,12 @@
 
     <!-- CHAT -->
     <section class="panel" id="tab-chat">
-      <div class="panelHeader">
-        <h3>Chat 💬</h3>
-        <p class="muted tiny">Tap any picture message bubble to open it fullscreen.</p>
+      <div class="panelTop">
+        <div>
+          <h3>Chat 💬</h3>
+          <p class="muted tiny">Tap a pic message to open it fullscreen.</p>
+        </div>
+        <div id="statusChip" class="statusChip">—</div>
       </div>
 
       <div id="chatBox" class="chatBox"></div>
@@ -101,7 +81,7 @@
       <div class="panelTop">
         <div>
           <h3>Saved 💾</h3>
-          <p class="muted tiny">Pics you save in the fullscreen viewer appear here for both of you.</p>
+          <p class="muted">Pics you saved in chat show up here for both of you.</p>
         </div>
 
         <div class="panelActions">
@@ -116,12 +96,7 @@
 
     <!-- DRAW -->
     <section class="panel hidden" id="tab-draw">
-      <div class="panelHeader">
-        <h3>Draw 🎨</h3>
-        <p class="muted tiny">
-          Brushes + fill bucket + text tool + symmetry + undo/redo. Save to shared gallery 💗
-        </p>
-      </div>
+      <h3>Draw 🎨</h3>
 
       <div class="drawBar">
         <div class="drawRow">
@@ -170,7 +145,7 @@
           </div>
 
           <div class="drawGroup">
-            <label class="muted tiny">Fill Tol</label>
+            <label class="muted tiny">Fill Tolerance</label>
             <input id="fillTol" type="range" min="0" max="80" value="24"/>
           </div>
         </div>
@@ -216,52 +191,52 @@
 
     <!-- LOVE -->
     <section class="panel hidden" id="tab-love">
-      <div class="panelHeader">
-        <h3>Love 💞</h3>
-        <p class="muted tiny">My Love app vibe — cute stats + anniversary countdown.</p>
+      <div class="loveTop">
+        <div>
+          <h3>Love 💞</h3>
+          <p class="muted tiny">My Love app vibe — cute stats + anniversary countdown.</p>
+        </div>
+        <div class="loveBtns">
+          <button id="loveSettingsBtn" class="btn">Set Photo</button>
+          <button id="loveShareBtn" class="btn primary">Share</button>
+          <input id="loveBgPick" type="file" accept="image/*" class="hidden" />
+        </div>
       </div>
 
-      <div class="loveHero" id="loveHero">
-        <div class="loveHeroTop">
-          <div class="loveNames" id="loveNames">Us 💗</div>
-          <div class="loveActions">
-            <input id="loveBgPick" type="file" accept="image/*" class="hidden" />
-            <button id="loveSettingsBtn" class="btn">Set Photo</button>
-            <button id="loveShareBtn" class="btn primary">Share</button>
+      <div id="loveHero" class="loveHero">
+        <div class="loveOverlay">
+          <div class="loveTitleRow">
+            <div class="loveNames" id="loveNames">Us 💗</div>
+            <div class="loveSince">Since <span id="loveStartPretty">—</span></div>
           </div>
-        </div>
 
-        <div class="loveBigRow">
-          <div class="loveBigStat">
-            <div class="loveBig" id="loveYMD">—</div>
+          <div class="loveMain">
+            <div class="loveTogether" id="loveYMD">—</div>
             <div class="muted tiny">together</div>
           </div>
-        </div>
 
-        <div class="loveMiniRow">
-          <div class="loveMini">
-            <div class="loveMiniNum" id="loveMonths">—</div>
-            <div class="muted tiny">months</div>
+          <div class="loveStats">
+            <div class="loveStat">
+              <div class="loveNum" id="loveMonths">—</div>
+              <div class="muted tiny">months</div>
+            </div>
+            <div class="loveStat">
+              <div class="loveNum" id="loveWeeks">—</div>
+              <div class="muted tiny">weeks</div>
+            </div>
+            <div class="loveStat">
+              <div class="loveNum" id="loveDays2">—</div>
+              <div class="muted tiny">days</div>
+            </div>
+            <div class="loveStat">
+              <div class="loveNum" id="loveHours">—</div>
+              <div class="muted tiny">hours</div>
+            </div>
           </div>
-          <div class="loveMini">
-            <div class="loveMiniNum" id="loveWeeks">—</div>
-            <div class="muted tiny">weeks</div>
-          </div>
-          <div class="loveMini">
-            <div class="loveMiniNum" id="loveDays2">—</div>
-            <div class="muted tiny">days</div>
-          </div>
-          <div class="loveMini">
-            <div class="loveMiniNum" id="loveHours">—</div>
-            <div class="muted tiny">hours</div>
-          </div>
-        </div>
 
-        <div class="loveFooter">
-          <div class="muted tiny">Since <b id="loveStartPretty">June 18, 2024</b> (EST)</div>
-          <div class="loveNext">
+          <div class="loveFooter">
             <div class="muted tiny">Next anniversary in</div>
-            <div class="loveNextNum" id="loveNextAnniv">—</div>
+            <div class="loveNext" id="loveNextAnniv">—</div>
           </div>
         </div>
       </div>
@@ -269,17 +244,43 @@
 
     <!-- CALENDAR -->
     <section class="panel hidden" id="tab-calendar">
-      <!-- app.js builds the calendar UI inside this section -->
-      <h3>Calendar 📅</h3>
-      <p class="muted tiny">Loading calendar…</p>
+      <div class="panelTop">
+        <div>
+          <h3>Calendar 📅</h3>
+          <p class="muted tiny">Shared events for both of you.</p>
+        </div>
+        <button id="addEventBtn" class="btn primary">+ Add Event</button>
+      </div>
+
+      <div class="calWrap">
+        <div class="calHeader">
+          <button id="calPrev" class="btn">←</button>
+          <div id="calTitle" class="calTitle">—</div>
+          <button id="calNext" class="btn">→</button>
+        </div>
+
+        <div class="calGridHead">
+          <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+
+        <div id="calGrid" class="calGrid"></div>
+
+        <div class="calSide">
+          <div class="calSideTop">
+            <div>
+              <div class="muted tiny">Selected day</div>
+              <div id="calSelected" class="calSelected">—</div>
+            </div>
+          </div>
+          <div id="calEventsList" class="calEvents"></div>
+        </div>
+      </div>
     </section>
 
     <!-- ADMIN -->
     <section class="panel hidden" id="tab-admin">
-      <div class="panelHeader">
-        <h3>Admin 🛡️</h3>
-        <p class="muted tiny">Approve/deny accounts + manage users + clear chat.</p>
-      </div>
+      <h3>Admin 🛡️</h3>
+      <p class="muted">Approve/deny accounts + manage users.</p>
 
       <div class="adminBox">
         <div class="adminActions">
@@ -296,6 +297,7 @@
         <div id="accountsList" class="list"></div>
       </div>
     </section>
+
   </main>
 
   <!-- FULLSCREEN IMAGE VIEWER -->
@@ -313,8 +315,32 @@
       <img id="modalImg" class="fsImg" alt="photo"/>
     </div>
 
-    <div class="fsHint muted tiny">
-      Save adds it to the Saved tab for both of you 💗
+    <div class="fsHint muted tiny">Saved adds it to the Saved tab for both of you 💗</div>
+  </div>
+
+  <!-- ADD EVENT MODAL -->
+  <div id="eventModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalTop">
+        <div>
+          <div class="modalTitle">Add Event</div>
+          <div class="muted tiny">Shared calendar event</div>
+        </div>
+        <button id="eventClose" class="btn">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <input id="eventTitle" class="input" placeholder="Title (ex: Date night 💗)" />
+        <div class="row">
+          <input id="eventDate" class="input" type="date" />
+          <input id="eventTime" class="input" type="time" />
+        </div>
+        <textarea id="eventNotes" class="input" style="min-height:90px" placeholder="Notes (optional)"></textarea>
+      </div>
+
+      <div class="modalBottom">
+        <button id="eventSave" class="btn primary">Save</button>
+      </div>
     </div>
   </div>
 
