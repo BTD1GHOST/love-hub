@@ -1,8 +1,11 @@
 // ===============================
 // OUR LITTLE HUB — app.js (FULL)
 // ✅ KEEP EVERYTHING THE SAME
-// ✅ ONLY CHANGE: image “snap” open/fullscreen is back to ORIGINAL (tap -> open immediately)
-// (No hold-to-view, no timer overlay)
+// ✅ ONLY CHANGE: “snap” open/fullscreen feels like Snapchat (mobile)
+//   - Tap image bubble -> opens instantly
+//   - Fullscreen is “clean”: NO buttons/title shown by default
+//   - Tap anywhere to close (like Snap)
+//   - Saved/Draw fullscreen stays the SAME as before (shows buttons)
 // ===============================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -300,13 +303,36 @@ async function downloadBlob(blob, filename) {
 }
 
 // =====================================================
-// ✅ ORIGINAL FULLSCREEN IMAGE VIEWER (tap to open)
+// ✅ FULLSCREEN IMAGE VIEWER
+// ✅ ONLY CHANGE: “snap mode” = Snapchat style (clean + tap to close)
 // =====================================================
 let openKey = null;
 let openFilename = null;
 let openContentType = null;
 
-function openFullscreenWithBlob(blob, meta) {
+// NEW: track if current fullscreen is opened from chat “snap”
+let fullscreenMode = "normal"; // "normal" | "snap"
+
+function applyFullscreenChrome() {
+  const isSnap = fullscreenMode === "snap";
+
+  // In snap mode: hide all chrome/buttons, tap anywhere closes
+  if (closeModal) closeModal.style.display = isSnap ? "none" : "";
+  if (fsTitle) fsTitle.style.display = isSnap ? "none" : "";
+  if (saveChatBtn) saveChatBtn.style.display = isSnap ? "none" : "";
+  if (saveDeviceBtn) saveDeviceBtn.style.display = isSnap ? "none" : "";
+
+  // Make modal feel more “Snap”
+  if (imgModal) {
+    imgModal.classList.toggle("snapMode", isSnap);
+    // (CSS optional) but we can still force dark background & no padding
+    imgModal.style.background = isSnap ? "rgba(0,0,0,0.95)" : "";
+  }
+}
+
+function openFullscreenWithBlob(blob, meta, mode = "normal") {
+  fullscreenMode = mode;
+
   openKey = meta.key;
   openFilename = meta.filename || "image.jpg";
   openContentType = meta.contentType || "image/*";
@@ -321,10 +347,10 @@ function openFullscreenWithBlob(blob, meta) {
 
   if (imgModal) imgModal.dataset.blobUrl = url;
 
-  // show buttons
-  if (saveChatBtn) saveChatBtn.style.display = "";
-  if (saveDeviceBtn) saveDeviceBtn.style.display = "";
+  // show buttons (normal mode) + set text
   if (saveChatBtn) saveChatBtn.textContent = "💾 Save";
+
+  applyFullscreenChrome();
 }
 
 function closeFullscreen() {
@@ -342,15 +368,35 @@ function closeFullscreen() {
   openFilename = null;
   openContentType = null;
 
+  fullscreenMode = "normal";
+  applyFullscreenChrome();
+
   if (saveChatBtn) saveChatBtn.textContent = "💾 Save";
 }
 
+// Normal close button (still works in normal mode)
 closeModal?.addEventListener("click", closeFullscreen);
 
+// Escape to close (kept)
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && imgModal && !imgModal.classList.contains("hidden")) {
     closeFullscreen();
   }
+});
+
+// NEW: In SNAP MODE, tap anywhere to close (like Snapchat)
+// (In normal mode: only tapping backdrop closes, not image/buttons)
+imgModal?.addEventListener("click", (e) => {
+  if (!imgModal || imgModal.classList.contains("hidden")) return;
+
+  if (fullscreenMode === "snap") {
+    // Snapchat-style: tap anywhere closes
+    closeFullscreen();
+    return;
+  }
+
+  // Normal mode: only backdrop closes
+  if (e.target === imgModal) closeFullscreen();
 });
 
 saveChatBtn?.addEventListener("click", async () => {
@@ -503,7 +549,8 @@ function renderSavedGrid(docs) {
             renderSavedGrid(lastSavedDocs);
             return;
           }
-          openFullscreenWithBlob(blob, { key: s.key, filename: s.filename, contentType: s.contentType });
+          // Saved tab uses NORMAL viewer (unchanged)
+          openFullscreenWithBlob(blob, { key: s.key, filename: s.filename, contentType: s.contentType }, "normal");
         });
       } catch {
         img.src = "";
@@ -639,7 +686,9 @@ function startChatRealtime() {
           }
         }).catch(() => {});
 
-        // ✅ ORIGINAL BEHAVIOR: tap bubble -> open fullscreen immediately
+        // ✅ Snapchat-style open:
+        // - Tap bubble -> fullscreen “snap mode” (clean)
+        // - Tap anywhere closes
         div.addEventListener("click", async () => {
           const vs = await getDoc(viewDocRef).catch(() => null);
           if (vs && vs.exists && vs.exists()) return;
@@ -647,11 +696,12 @@ function startChatRealtime() {
           try {
             const blob = await fetchImageBlob(m.key);
 
-            openFullscreenWithBlob(blob, {
-              key: m.key,
-              filename: m.filename,
-              contentType: m.contentType
-            });
+            // ONLY CHANGE: open in "snap" mode (everything else stays same)
+            openFullscreenWithBlob(
+              blob,
+              { key: m.key, filename: m.filename, contentType: m.contentType },
+              "snap"
+            );
 
             await setDoc(viewDocRef, { openedAt: serverTimestamp() }).catch(() => {});
 
@@ -1462,7 +1512,8 @@ function startDrawGallery() {
           const blob = await fetchImageBlob(it.key);
           img.src = URL.createObjectURL(blob);
           img.addEventListener("click", () => {
-            openFullscreenWithBlob(blob, { key: it.key, filename: it.filename, contentType: it.contentType });
+            // Draw gallery uses NORMAL viewer (unchanged)
+            openFullscreenWithBlob(blob, { key: it.key, filename: it.filename, contentType: it.contentType }, "normal");
           });
         } catch {
           img.src = "";
@@ -1589,15 +1640,10 @@ onAuthStateChanged(auth, async (user) => {
     }
   }
 });
-// ===============================
-// (End of file) — small safety + UX niceties
-// KEEP EVERYTHING THE SAME
-// ===============================
 
-// Close fullscreen if you tap the dark backdrop (but NOT if you tap the image/buttons)
-imgModal?.addEventListener("click", (e) => {
-  if (e.target === imgModal) closeFullscreen();
-});
+// ===============================
+// Small safety + UX niceties (kept)
+// ===============================
 
 // Optional: press Enter to send chat (Shift+Enter = newline)
 chatText?.addEventListener("keydown", (e) => {
@@ -1618,13 +1664,10 @@ imgPick?.addEventListener("change", () => {
 });
 
 // If your page loads while already signed in + approved, make sure first tab shows
-// (Safe: only runs once DOM is ready)
 window.addEventListener("load", () => {
-  // Default: activate first tab if none active
   const active = document.querySelector(".tab.active");
   if (!active) {
     const first = document.querySelector(".tab");
     if (first) first.click();
   }
 });
-
